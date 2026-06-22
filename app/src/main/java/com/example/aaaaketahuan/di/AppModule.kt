@@ -1,6 +1,7 @@
 package com.example.aaaaketahuan.di
 
 import android.content.Context
+import com.example.aaaaketahuan.data.remote.GoogleSheetsHelper
 import com.example.aaaaketahuan.data.repository.TransaksiRepository
 import dagger.Module
 import dagger.Provides
@@ -15,9 +16,18 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideTransaksiRepository(
+    fun provideGoogleSheetsHelper(
         @ApplicationContext context: Context
+    ): GoogleSheetsHelper {
+        return GoogleSheetsHelper(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideTransaksiRepository(
+        @ApplicationContext context: Context,
+        sheetsHelper: GoogleSheetsHelper
     ): TransaksiRepository {
-        return TransaksiRepository(context)
+        return TransaksiRepository(context, sheetsHelper)
     }
 }

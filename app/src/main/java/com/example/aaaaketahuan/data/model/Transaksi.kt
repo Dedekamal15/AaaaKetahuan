@@ -11,5 +11,6 @@ data class Transaksi(
     val keterangan: String,
     val kategori: String,
     val bulan: Int,               // 1-12
-    val tahun: Int
+    val tahun: Int,
+    var isSynced: Boolean = false // sync status to Google Sheets
 )

@@ -52,6 +52,12 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "/META-INF/LICENSE"
+            excludes += "/META-INF/LICENSE.txt"
+            excludes += "/META-INF/NOTICE"
+            excludes += "/META-INF/NOTICE.txt"
+            excludes += "/META-INF/INDEX.LIST"
         }
     }
 }
@@ -91,6 +97,16 @@ dependencies {
 
     // Coroutines
     implementation(libs.coroutines.android)
+
+    // Google Sheets API
+    implementation(libs.google.api.client.android) {
+        exclude(group = "org.apache.httpcomponents")
+    }
+    implementation(libs.google.api.services.sheets) {
+        exclude(group = "org.apache.httpcomponents")
+    }
+    implementation(libs.google.auth.oauth2)
+    implementation(libs.google.http.client.gson)
 }
 
 kapt {

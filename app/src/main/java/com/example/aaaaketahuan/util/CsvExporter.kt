@@ -12,12 +12,12 @@ object CsvExporter {
         FileWriter(file).use { writer ->
             // UTF-8 BOM for Windows Excel compatibility
             writer.write('\uFEFF')
-            writer.write("id,tanggal,jenis,jumlah,namaBarang,keterangan,kategori,bulan,tahun\n")
+            writer.write("id,tanggal,jenis,jumlah,namaBarang,keterangan,kategori,bulan,tahun,isSynced\n")
             list.forEach { t ->
                 writer.write(
                     "${escapeCsv(t.id)},${escapeCsv(t.tanggal)},${escapeCsv(t.jenis)}," +
                     "${t.jumlah},${escapeCsv(t.namaBarang)},${escapeCsv(t.keterangan)}," +
-                    "${escapeCsv(t.kategori)},${t.bulan},${t.tahun}\n"
+                    "${escapeCsv(t.kategori)},${t.bulan},${t.tahun},${t.isSynced}\n"
                 )
             }
         }

@@ -6,8 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.aaaaketahuan.data.model.Transaksi
 import com.example.aaaaketahuan.data.repository.TransaksiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +42,12 @@ class TransaksiViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    private val _pendingSyncCount = MutableStateFlow(0)
+    val pendingSyncCount: StateFlow<Int> = _pendingSyncCount.asStateFlow()
+
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
     val totalMasuk: StateFlow<Double> = _transaksiList
         .map { list -> list.filter { it.jenis == "masuk" }.sumOf { it.jumlah } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
@@ -61,6 +65,7 @@ class TransaksiViewModel @Inject constructor(
 
     init {
         loadTransaksi()
+        syncPending()
     }
 
     fun loadTransaksi() {
@@ -182,5 +187,30 @@ class TransaksiViewModel @Inject constructor(
             .filter { it.bulan == bulan && it.tahun == tahun && it.jenis == "keluar" }
             .groupBy { it.kategori }
             .mapValues { (_, list) -> list.sumOf { it.jumlah } }
+    }
+
+    /**
+     * Retry syncing all unsynced transactions to Google Sheets.
+     */
+    fun syncPending() {
+        viewModelScope.launch {
+            _isSyncing.value = true
+            try {
+                val count = repository.syncPendingTransactions()
+                if (count > 0) {
+                    loadTransaksi()
+                }
+                updatePendingCount()
+            } catch (e: Exception) {
+                _errorMessage.value = "Gagal sinkronisasi: ${e.message}"
+            } finally {
+                _isSyncing.value = false
+            }
+        }
+    }
+
+    private suspend fun updatePendingCount() {
+        val all = repository.getAllTransaksi()
+        _pendingSyncCount.value = all.count { !it.isSynced }
     }
 }

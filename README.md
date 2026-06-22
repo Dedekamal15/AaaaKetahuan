@@ -1,16 +1,16 @@
 # AaaaKetahuan
 
-Aplikasi Android untuk mencatat pemasukan dan pengeluaran bulanan secara lokal, tanpa database eksternal.
+Aplikasi Android untuk mencatat pemasukan dan pengeluaran bulanan secara lokal yang tersinkronisasi secara real-time ke Google Spreadsheet.
 
 ## Fitur Utama
 
 - Input transaksi masuk dan keluar dengan nama barang, nominal, dan kategori
 - Autocomplete nama barang — saran muncul otomatis setelah nama yang sama diinput ≥ 2 kali
+- **Sinkronisasi real-time ke Google Spreadsheet sebagai cloud backup dan akses lintas perangkat**
 - Dashboard bulanan: saldo, total masuk, total keluar, dan daftar transaksi terkini
 - Riwayat transaksi dengan filter berdasarkan bulan dan kategori
 - Grafik bar bulanan per kategori pengeluaran
 - Export dan import data dalam format CSV
-- Semua data tersimpan lokal di internal storage perangkat (tidak butuh internet)
 
 ## Tech Stack
 
@@ -21,41 +21,10 @@ Aplikasi Android untuk mencatat pemasukan dan pengeluaran bulanan secara lokal, 
 | State management | ViewModel + StateFlow |
 | Async | Kotlin Coroutines |
 | Serialisasi JSON | Gson |
+| Network/Cloud | Google Sheets API (Google API Client) |
 | Grafik | MPAndroidChart |
 | Navigasi | Jetpack Navigation Compose |
 | Dependency Injection | Hilt |
-
-## Struktur Data
-
-Data disimpan dalam dua file JSON di internal storage app (`context.filesDir`):
-
-**`transaksi.json`** — daftar semua transaksi
-
-```json
-[
-  {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "tanggal": "2026-06-18",
-    "jenis": "keluar",
-    "jumlah": 45000.0,
-    "namaBarang": "Makan siang",
-    "keterangan": "Warung bu Tini",
-    "kategori": "Makanan",
-    "bulan": 6,
-    "tahun": 2026
-  }
-]
-```
-
-**`nama_barang_freq.json`** — frekuensi kemunculan nama barang untuk autocomplete
-
-```json
-{
-  "Makan siang": 5,
-  "Bensin": 3,
-  "Aqua": 2
-}
-```
 
 ## Struktur Project
 
@@ -64,45 +33,29 @@ app/src/main/java/com/example/aaaaketahuan/
 ├── data/
 │   ├── model/
 │   │   └── Transaksi.kt
+│   ├── remote/
+│   │   └── GoogleSheetsHelper.kt
 │   └── repository/
 │       └── TransaksiRepository.kt
 ├── di/
 │   └── AppModule.kt
 ├── ui/
-│   ├── dashboard/
-│   │   └── DashboardScreen.kt
-│   ├── input/
-│   │   ├── InputTransaksiScreen.kt
-│   │   └── AutocompleteTextField.kt
-│   ├── riwayat/
-│   │   └── RiwayatScreen.kt
-│   ├── grafik/
-│   │   └── GrafikScreen.kt
-│   ├── export/
-│   │   └── ExportImportScreen.kt
-│   └── theme/
-│       └── Theme.kt
-├── util/
-│   ├── JsonHelper.kt
-│   └── CsvExporter.kt
-├── viewmodel/
-│   └── TransaksiViewModel.kt
+...
 └── MainActivity.kt
 ```
+
+*Catatan: Kredensial API (Service Account) ditempatkan di `app/src/main/res/raw/credentials.json` dan **wajib** diabaikan dalam `.gitignore`.*
 
 ## Cara Menjalankan
 
 1. Clone atau buka project di Android Studio (minimum Arctic Fox)
 2. Pastikan Kotlin versi 1.9+ dan Compose BOM terbaru terpasang
-3. Sync Gradle
-4. Jalankan di emulator atau perangkat fisik (min API 26 / Android 8.0)
-
-## Cara Export Data
-
-Buka menu **Export / Import** → pilih rentang bulan → tap **Export CSV**. File akan tersimpan di folder Downloads atau dapat langsung dibagikan via Share Sheet.
+3. Siapkan `credentials.json` dari Google Cloud Service Account dan letakkan di `res/raw/`
+4. Sync Gradle
+5. Jalankan di emulator atau perangkat fisik (min API 26 / Android 8.0)
 
 ## Persyaratan Sistem
 
 - Android 8.0 (API 26) ke atas
-- Tidak memerlukan izin internet
-- Memerlukan izin `WRITE_EXTERNAL_STORAGE` hanya untuk export CSV ke Downloads (API < 29)
+- Memerlukan izin `android.permission.INTERNET` untuk mengirim data ke Google Sheets.
+- Memerlukan izin `android.permission.ACCESS_NETWORK_STATE` untuk mengecek status koneksi internet sebelum sinkronisasi.

@@ -1,4 +1,4 @@
-﻿# PROJECT.md — AaaaKetahuan
+# PROJECT.md — AaaaKetahuan
 
 Dokumen ini adalah sumber kebenaran tunggal (_single source of truth_) untuk konteks project: tujuan, keputusan desain, batasan, dan status saat ini.
 
@@ -6,7 +6,7 @@ Dokumen ini adalah sumber kebenaran tunggal (_single source of truth_) untuk kon
 
 ## Gambaran Umum
 
-**AaaaKetahuan** adalah aplikasi Android native untuk mencatat pemasukan dan pengeluaran pribadi secara lokal. Tidak ada server, tidak ada akun, tidak ada internet — semua data tersimpan di perangkat pengguna dalam format JSON.
+**AaaaKetahuan** adalah aplikasi Android native untuk mencatat pemasukan dan pengeluaran pribadi yang tersinkronisasi secara *real-time* dengan Google Spreadsheet. Menggabungkan kecepatan penyimpanan lokal (JSON) dengan kemudahan akses data di *cloud* (Google Sheets).
 
 **Bahasa:** Kotlin  
 **UI:** Jetpack Compose  
@@ -28,6 +28,7 @@ Individu yang ingin mencatat keuangan pribadi secara cepat dan privat, tanpa ove
 - Input transaksi dalam waktu < 15 detik
 - Data tidak pernah hilang akibat bug (error handling solid)
 - Ekspor CSV bisa dibuka dengan benar di Excel dan Google Sheets
+- Data tersinkronisasi ke Google Sheets secara otomatis saat ada koneksi internet
 
 ---
 
@@ -41,6 +42,7 @@ Individu yang ingin mencatat keuangan pribadi secara cepat dan privat, tanpa ove
 | Nama barang dengan autocomplete | P0 | Belum |
 | Kategori transaksi (8 kategori) | P0 | Belum |
 | Dashboard ringkasan bulanan | P0 | Belum |
+| Sinkronisasi real-time ke Google Sheets | P0 | Belum |
 | Riwayat transaksi dengan filter | P1 | Belum |
 | Grafik bar bulanan per kategori | P1 | Belum |
 | Export CSV | P1 | Belum |
@@ -50,7 +52,6 @@ Individu yang ingin mencatat keuangan pribadi secara cepat dan privat, tanpa ove
 
 Fitur-fitur berikut secara eksplisit **tidak akan** dikerjakan di v1.0:
 
-- Sinkronisasi cloud (Google Drive, Dropbox)
 - Multiple akun atau multi-user
 - Notifikasi/reminder
 - Widget homescreen
@@ -63,6 +64,9 @@ Alasan: menjaga scope agar v1.0 bisa selesai dan stabil. Fitur-fitur ini masuk B
 ---
 
 ## Keputusan Teknis & Alasannya
+
+### Mengapa Google Sheets API (Service Account)?
+Google Sheets dipilih sebagai *backend/database* gratis agar pengguna dapat dengan mudah melihat, membagikan, atau mengedit data keuangan mereka melalui PC. Penggunaan Service Account memungkinkan aplikasi mengirim data di *background* tanpa mengharuskan pengguna *login* via OAuth2 setiap kali membuka aplikasi.
 
 ### Mengapa JSON, bukan Room/SQLite?
 
@@ -141,6 +145,7 @@ mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", versio
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation-compose" }
 lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+# Google API dependencies will be added di sini (Fase 2.5)
 ```
 
 > MPAndroidChart diambil dari JitPack. Pastikan `jitpack.io` sudah ditambahkan ke `settings.gradle.kts`:
@@ -155,10 +160,11 @@ coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutin
 | Risiko | Kemungkinan | Mitigasi |
 |---|---|---|
 | File JSON corrupt saat app crash di tengah penulisan | Sedang | Tulis ke file temp dulu, rename setelah berhasil (atomic write) |
-| Data hilang saat uninstall | Pasti | Dokumentasikan di README; anjurkan export rutin |
+| Data hilang saat uninstall | Pasti | Dokumentasikan di README; tersinkronisasi ke Google Sheets sebagai backup utama |
 | Performa lambat saat data > 1000 transaksi | Rendah-Sedang | Monitor dengan Profiler; siapkan migration ke Room |
 | MPAndroidChart tidak di-maintain | Rendah | Sudah stabil bertahun-tahun; fork tersedia jika perlu |
 | Encoding CSV salah di Excel Windows | Sedang | Tambahkan UTF-8 BOM saat export |
+| Gagal sinkronisasi karena internet mati | Tinggi | Flag `isSynced=false` pada data lokal, retry otomatis saat internet kembali |
 
 ---
 

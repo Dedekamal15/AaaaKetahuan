@@ -39,7 +39,8 @@ object CsvImporter {
                     keterangan = parts[5],
                     kategori = parts[6],
                     bulan = parts[7].toInt(),
-                    tahun = parts[8].toInt()
+                    tahun = parts[8].toInt(),
+                    isSynced = if (parts.size > 9) parts[9].toBoolean() else false
                 )
                 transaksiList.add(transaksi)
             } catch (e: Exception) {

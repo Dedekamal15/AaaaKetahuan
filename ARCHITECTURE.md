@@ -22,8 +22,9 @@ Project ini menggunakan pola **MVVM (Model-View-ViewModel)** yang dikombinasikan
                  │ reads/writes
 ┌────────────────▼────────────────────┐
 │          DATA LAYER                 │
-│  transaksi.json + nama_barang_freq  │
-│         (Internal Storage)          │
+│ ┌──────────────┐   ┌──────────────┐ │
+│ │ Local (JSON) │   │ Remote (API) │ │
+│ └──────────────┘   └──────────────┘ │
 └─────────────────────────────────────┘
 ```
 
@@ -45,33 +46,6 @@ Berisi semua screen dan komponen visual. UI bersifat **stateless** — tidak men
 | Grafik | `GrafikScreen.kt` | Bar chart pengeluaran per kategori per bulan |
 | Export/Import | `ExportImportScreen.kt` | Pilih rentang bulan, generate dan share CSV |
 
-### Komponen Reusable
-
-**`AutocompleteTextField`** — komponen kunci untuk fitur saran nama barang:
-
-```
-User mengetik
-    ↓
-onValueChange → ViewModel.onNamaBarangChange(query)
-    ↓ debounce 150ms
-    ↓
-repository.getSaran(query) — filter freq >= 2
-    ↓
-StateFlow<List<String>> → UI render dropdown
-    ↓
-User pilih item → field terisi, dropdown tutup
-```
-
-Aturan tampil dropdown:
-- Hanya muncul jika `query.isNotBlank()` DAN ada hasil saran
-- Saran diurutkan dari yang paling sering digunakan
-- Maksimal 5 item saran ditampilkan
-- Matching bersifat case-insensitive dan substring (bukan prefix)
-
-### Navigasi
-
-Menggunakan **Jetpack Navigation Compose** dengan Bottom Navigation Bar untuk empat destinasi utama (Dashboard, Input, Riwayat, Grafik) dan satu screen Export yang dapat diakses dari Dashboard atau menu overflow.
-
 ---
 
 ## Layer 2 — ViewModel Layer
@@ -85,136 +59,63 @@ Satu ViewModel utama: `TransaksiViewModel`. Bertanggung jawab atas:
 3. Menerima event dari UI dan mendelegasikan ke Repository
 4. Menghitung ringkasan (total masuk, total keluar, saldo)
 
-```kotlin
-// Contoh state yang diekspos ke UI
-val transaksiList: StateFlow<List<Transaksi>>
-val totalMasuk: StateFlow<Double>
-val totalKeluar: StateFlow<Double>
-val saranNamaBarang: StateFlow<List<String>>
-val filterBulan: StateFlow<Int>
-val filterTahun: StateFlow<Int>
-```
-
-**Alur autocomplete di ViewModel:**
-
-```kotlin
-val saranNamaBarang: StateFlow<List<String>> = _namaBarangInput
-    .debounce(150)
-    .map { query -> repository.getSaran(query) }
-    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-```
-
-`debounce(150)` memastikan `getSaran()` tidak dipanggil di setiap keystroke — hanya setelah user berhenti mengetik selama 150ms.
-
 ---
 
 ## Layer 3 — Repository Layer
 
 **Teknologi:** Kotlin Coroutines (`Dispatchers.IO`)
 
-`TransaksiRepository` adalah satu-satunya titik akses ke penyimpanan data. Semua operasi file dijalankan di `Dispatchers.IO` agar tidak memblokir main thread.
+`TransaksiRepository` kini memiliki tanggung jawab ganda (*dual-write*). Saat `simpanTransaksi()` dipanggil, Repository akan menulis ke file `transaksi.json` lokal (untuk respons UI yang cepat) lalu menembak Google Sheets API di *background* untuk sinkronisasi *real-time*.
 
 ### Operasi utama
 
 ```kotlin
 suspend fun getAllTransaksi(): List<Transaksi>
-suspend fun simpanTransaksi(transaksi: Transaksi)
+suspend fun simpanTransaksi(transaksi: Transaksi) // Menyimpan ke Lokal lalu sinkron ke Cloud
 suspend fun hapusTransaksi(id: String)
 suspend fun editTransaksi(transaksi: Transaksi)
 suspend fun getTransaksiByBulan(bulan: Int, tahun: Int): List<Transaksi>
 fun getSaran(query: String): List<String>
-suspend fun exportCsv(bulan: Int?, tahun: Int?): File
-suspend fun importCsv(uri: Uri): Int  // returns jumlah baris berhasil diimpor
+suspend fun syncPendingTransactions() // Sinkronisasi ulang data dengan isSynced = false
 ```
-
-### Logika frekuensi autocomplete
-
-Saat `simpanTransaksi()` dipanggil:
-
-1. Simpan transaksi ke `transaksi.json`
-2. Baca `nama_barang_freq.json`
-3. Increment counter untuk `transaksi.namaBarang`
-4. Tulis ulang `nama_barang_freq.json`
-
-Saat `hapusTransaksi()` dipanggil, frekuensi **tidak** dikurangi — riwayat pencarian tetap tersedia meski transaksinya dihapus. Ini keputusan UX yang disengaja.
 
 ---
 
 ## Data Layer
 
-### File Storage
+Kini memiliki dua sumber data:
 
-Semua file disimpan di `context.filesDir` (internal storage, privat per-app, tidak butuh permission).
-
+### 1. LocalDataSource (Internal Storage)
 | File | Format | Isi |
 |---|---|---|
-| `transaksi.json` | JSON Array | Semua objek `Transaksi` |
+| `transaksi.json` | JSON Array | Semua objek `Transaksi` (tambahan field `isSynced: Boolean`) |
 | `nama_barang_freq.json` | JSON Object | Map `namaBarang → frekuensi` |
+
+### 2. RemoteDataSource (Google Sheets API)
+Berkomunikasi menggunakan `GoogleSheetsHelper.kt` dan kredensial dari `credentials.json` Service Account.
 
 ### Model Data
 
 ```kotlin
 data class Transaksi(
     val id: String = UUID.randomUUID().toString(),
-    val tanggal: String,          // format: "yyyy-MM-dd"
-    val jenis: String,            // "masuk" atau "keluar"
+    val tanggal: String,
+    val jenis: String,
     val jumlah: Double,
-    val namaBarang: String,       // free text, sumber data autocomplete
-    val keterangan: String,       // catatan tambahan opsional
-    val kategori: String,         // dari KategoriEnum
-    val bulan: Int,               // 1–12
-    val tahun: Int
+    val namaBarang: String,
+    val keterangan: String,
+    val kategori: String,
+    val bulan: Int,
+    val tahun: Int,
+    var isSynced: Boolean = false // Penanda status sinkronisasi ke cloud
 )
-
-enum class KategoriEnum(val label: String) {
-    MAKANAN("Makanan"),
-    TRANSPORTASI("Transportasi"),
-    KESEHATAN("Kesehatan"),
-    PENDIDIKAN("Pendidikan"),
-    TAGIHAN("Tagihan"),
-    HIBURAN("Hiburan"),
-    TABUNGAN("Tabungan"),
-    LAINNYA("Lainnya")
-}
-```
-
-### Serialisasi
-
-Menggunakan **Gson** untuk konversi `List<Transaksi>` ↔ JSON string. Operasi baca/tulis dibantu `JsonHelper.kt`:
-
-```kotlin
-object JsonHelper {
-    fun bacaTransaksi(file: File): List<Transaksi>
-    fun simpanTransaksi(file: File, list: List<Transaksi>)
-    fun bacaFrekuensi(file: File): MutableMap<String, Int>
-    fun simpanFrekuensi(file: File, map: Map<String, Int>)
-}
-```
-
-### Format CSV Export
-
-```
-id,tanggal,jenis,jumlah,namaBarang,keterangan,kategori,bulan,tahun
-550e8400,...,2026-06-18,keluar,45000.0,Makan siang,Warung bu Tini,Makanan,6,2026
 ```
 
 ---
 
 ## Dependency Injection
 
-Menggunakan **Hilt**. `AppModule.kt` menyediakan:
-
-```kotlin
-@Module
-@InstallIn(SingletonComponent::class)
-object AppModule {
-
-    @Provides @Singleton
-    fun provideTransaksiRepository(@ApplicationContext context: Context): TransaksiRepository {
-        return TransaksiRepository(context)
-    }
-}
-```
+Menggunakan **Hilt**. `AppModule.kt` menyediakan instance Repository dan GoogleSheetsHelper.
 
 ---
 
@@ -229,25 +130,16 @@ object AppModule {
        |
        | viewModelScope.launch { repository.simpanTransaksi(transaksi) }
        ▼
-[TransaksiRepository]  ──────────────────────────────────┐
-       |                                                   |
-       | withContext(Dispatchers.IO)                       |
-       ▼                                                   ▼
-[JsonHelper.simpanTransaksi()]            [JsonHelper.simpanFrekuensi()]
-       |                                                   |
-       ▼                                                   ▼
-[transaksi.json]                         [nama_barang_freq.json]
+[TransaksiRepository]  ──────────────────────────────────────────┐
+       |                                                         |
+       | 1. Simpan Lokal (Dispatchers.IO)                        | 2. Sync Remote (Background)
+       ▼                                                         ▼
+[JsonHelper.simpanTransaksi()]                       [GoogleSheetsHelper.appendRow()]
+       |                                                         |
+       ▼                                                         ▼
+[transaksi.json] (isSynced = false/true)               [Google Spreadsheet]
        |
-       | ← getAllTransaksi() setelah simpan
-       ▼
-[ViewModel update StateFlow]
-       |
+       | ← update UI
        ▼
 [UI recompose otomatis]
 ```
-
----
-
-## Pertimbangan Masa Depan
-
-Jika suatu saat data mulai besar (ribuan transaksi) dan performa JSON mulai terasa lambat, migration path yang direkomendasikan adalah **Room Database** (SQLite). Repository pattern yang sudah ada memudahkan migrasi — hanya perlu mengganti implementasi Repository tanpa mengubah ViewModel atau UI sama sekali.
