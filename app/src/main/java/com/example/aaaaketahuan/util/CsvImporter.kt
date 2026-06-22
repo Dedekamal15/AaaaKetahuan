@@ -40,7 +40,9 @@ object CsvImporter {
                     kategori = parts[6],
                     bulan = parts[7].toInt(),
                     tahun = parts[8].toInt(),
-                    isSynced = if (parts.size > 9) parts[9].toBoolean() else false
+                    metodeBayar = if (parts.size > 9) parts[9] else "",
+                    sumber = if (parts.size > 10) parts[10] else "",
+                    isSynced = if (parts.size > 11) parts[11].toBoolean() else false
                 )
                 transaksiList.add(transaksi)
             } catch (e: Exception) {

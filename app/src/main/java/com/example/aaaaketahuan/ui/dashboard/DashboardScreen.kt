@@ -58,7 +58,8 @@ fun DashboardScreen(
     onNavigateToRiwayat: () -> Unit = {},
     onNavigateToGrafik: () -> Unit = {},
     onNavigateToExport: () -> Unit = {},
-    onNavigateToInput: () -> Unit = {}
+    onNavigateToInput: () -> Unit = {},
+    onNavigateToPengaturan: () -> Unit = {}
 ) {
     val transaksiList by viewModel.transaksiList.collectAsState()
     val totalMasuk by viewModel.totalMasuk.collectAsState()
@@ -112,7 +113,7 @@ fun DashboardScreen(
                         IconButton(onClick = {}) {
                             Icon(Icons.Default.Notifications, contentDescription = "Notifikasi")
                         }
-                        IconButton(onClick = {}) {
+                        IconButton(onClick = onNavigateToPengaturan) {
                             Icon(Icons.Default.Settings, contentDescription = "Pengaturan")
                         }
                     }

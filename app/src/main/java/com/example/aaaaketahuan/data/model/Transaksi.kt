@@ -12,5 +12,7 @@ data class Transaksi(
     val kategori: String,
     val bulan: Int,               // 1-12
     val tahun: Int,
+    val metodeBayar: String = "", // "Cash", "Kredit", "E-Wallet", "Transfer", "QRIS"
+    val sumber: String = "",      // "Gaji", "Lainnya" (for income only)
     var isSynced: Boolean = false // sync status to Google Sheets
 )

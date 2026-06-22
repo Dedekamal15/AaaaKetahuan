@@ -33,6 +33,8 @@ import com.example.aaaaketahuan.ui.dashboard.DashboardScreen
 import com.example.aaaaketahuan.ui.export.ExportImportScreen
 import com.example.aaaaketahuan.ui.grafik.GrafikScreen
 import com.example.aaaaketahuan.ui.input.InputTransaksiScreen
+import com.example.aaaaketahuan.ui.pemasukan.PemasukanScreen
+import com.example.aaaaketahuan.ui.pengaturan.PengaturanScreen
 import com.example.aaaaketahuan.ui.riwayat.RiwayatScreen
 import com.example.aaaaketahuan.viewmodel.TransaksiViewModel
 
@@ -46,6 +48,7 @@ data class BottomNavItem(
 val bottomNavItems = listOf(
     BottomNavItem(NavRoute.DASHBOARD, "Dashboard", Icons.Filled.AccountBalanceWallet, Icons.Filled.AccountBalanceWallet),
     BottomNavItem(NavRoute.INPUT, "Input", Icons.Filled.AddCircle, Icons.Outlined.AddCircle),
+    BottomNavItem(NavRoute.PEMASUKAN, "Pemasukan", Icons.Filled.AccountBalanceWallet, Icons.Filled.AccountBalanceWallet),
     BottomNavItem(NavRoute.RIWAYAT, "Riwayat", Icons.Filled.History, Icons.Outlined.History),
     BottomNavItem(NavRoute.GRAFIK, "Grafik", Icons.Filled.Analytics, Icons.Outlined.Analytics)
 )
@@ -137,12 +140,19 @@ fun AppNavGraph(
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onNavigateToPengaturan = {
+                        navController.navigate(NavRoute.PENGATURAN)
                     }
                 )
             }
 
             composable(NavRoute.INPUT) {
                 InputTransaksiScreen(viewModel = viewModel)
+            }
+
+            composable(NavRoute.PEMASUKAN) {
+                PemasukanScreen(viewModel = viewModel)
             }
 
             composable(NavRoute.RIWAYAT) {
@@ -156,6 +166,13 @@ fun AppNavGraph(
 
             composable(NavRoute.GRAFIK) {
                 GrafikScreen(viewModel = viewModel)
+            }
+
+            composable(NavRoute.PENGATURAN) {
+                PengaturanScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable(NavRoute.EXPORT_IMPORT) {

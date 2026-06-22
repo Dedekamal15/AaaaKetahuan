@@ -104,7 +104,9 @@ class TransaksiViewModel @Inject constructor(
         namaBarang: String,
         keterangan: String,
         kategori: String,
-        tanggal: String
+        tanggal: String,
+        metodeBayar: String = "",
+        sumber: String = ""
     ) {
         viewModelScope.launch {
             try {
@@ -117,7 +119,9 @@ class TransaksiViewModel @Inject constructor(
                     keterangan = keterangan,
                     kategori = kategori,
                     bulan = date.monthValue,
-                    tahun = date.year
+                    tahun = date.year,
+                    metodeBayar = metodeBayar,
+                    sumber = sumber
                 )
                 repository.simpanTransaksi(transaksi)
                 loadTransaksi()

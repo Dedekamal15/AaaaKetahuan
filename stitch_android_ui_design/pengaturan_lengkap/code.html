@@ -1,0 +1,315 @@
+<!DOCTYPE html><html lang="id"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>CatatKas - Pengaturan</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed-dim": "#91d78a",
+                        "surface": "#f8f9fa",
+                        "surface-bright": "#f8f9fa",
+                        "on-secondary-fixed": "#021f29",
+                        "on-surface": "#191c1d",
+                        "secondary": "#48626e",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#2e3132",
+                        "surface-container-high": "#e7e8e9",
+                        "on-primary-fixed-variant": "#005312",
+                        "surface-variant": "#e1e3e4",
+                        "tertiary": "#1f6223",
+                        "secondary-container": "#cbe7f5",
+                        "on-secondary-container": "#4e6874",
+                        "background": "#f8f9fa",
+                        "on-secondary-fixed-variant": "#304a55",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#f3f4f5",
+                        "outline-variant": "#bfcaba",
+                        "on-primary-container": "#cbffc2",
+                        "outline": "#707a6c",
+                        "on-background": "#191c1d",
+                        "inverse-primary": "#88d982",
+                        "primary-fixed-dim": "#88d982",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#002204",
+                        "tertiary-fixed": "#acf4a4",
+                        "on-tertiary-container": "#c8ffbf",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed": "#002203",
+                        "surface-tint": "#1b6d24",
+                        "secondary-fixed": "#cbe7f5",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#2e7d32",
+                        "on-tertiary-fixed-variant": "#0c5216",
+                        "on-tertiary": "#ffffff",
+                        "primary": "#0d631b",
+                        "primary-fixed": "#a3f69c",
+                        "on-surface-variant": "#40493d",
+                        "surface-white": "#FFFFFF",
+                        "expense-red": "#D32F2F",
+                        "surface-dim": "#d9dadb",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed-dim": "#afcbd8",
+                        "surface-container-highest": "#e1e3e4",
+                        "tertiary-container": "#3a7b39",
+                        "surface-container": "#edeeef",
+                        "inverse-on-surface": "#f0f1f2"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "1rem",
+                        "stack-sm": "0.5rem",
+                        "margin-mobile": "1rem",
+                        "margin-tablet": "1.5rem",
+                        "gutter": "1rem",
+                        "stack-lg": "1.5rem",
+                        "margin-desktop": "2rem"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Inter", "sans-serif"],
+                        "body-md": ["Inter", "sans-serif"],
+                        "headline-lg": ["Inter", "sans-serif"],
+                        "body-lg": ["Inter", "sans-serif"],
+                        "label-lg": ["Inter", "sans-serif"],
+                        "title-md": ["Inter", "sans-serif"],
+                        "headline-md": ["Inter", "sans-serif"],
+                        "headline-sm": ["Inter", "sans-serif"],
+                        "label-md": ["Inter", "sans-serif"],
+                        "title-lg": ["Inter", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "700"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.1px", "fontWeight": "500"}],
+                        "title-md": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.5px", "fontWeight": "500"}],
+                        "title-lg": ["18px", {"lineHeight": "24px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Base styles to ensure consistency */
+        body {
+            -webkit-tap-highlight-color: transparent;
+        }
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 1rem);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface font-body-md text-on-surface antialiased min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-surface dark:bg-on-background">
+<div class="flex items-center px-gutter h-16 w-full max-w-7xl mx-auto gap-stack-md">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed text-[24px]">account_balance_wallet</span>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed tracking-tight">CatatKas</h1>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow w-full max-w-7xl mx-auto px-gutter pt-stack-md pb-24 md:pb-stack-lg">
+<!-- Section: Kategori & Sumber -->
+<section class="mb-stack-lg">
+<div class="mb-stack-sm">
+<h3 class="font-title-md text-title-md text-on-surface">Kategori &amp; Sumber</h3>
+<p class="font-body-md text-body-md text-secondary">Disinkron juga ke konfigurasi Sheet kamu.</p>
+</div>
+<div class="bg-surface-container-lowest rounded-2xl border border-surface-variant shadow-sm overflow-hidden flex flex-col">
+<button class="w-full p-stack-md flex items-center justify-between hover:bg-surface-container-low transition-colors duration-200 border-b border-surface-variant">
+<div class="flex items-center gap-stack-md">
+<div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">label</span>
+</div>
+<div class="font-label-lg text-label-lg text-on-surface">Kategori</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-body-md text-body-md text-secondary">10 kategori</span>
+<span class="material-symbols-outlined text-secondary">chevron_right</span>
+</div>
+</button>
+<button class="w-full p-stack-md flex items-center justify-between hover:bg-surface-container-low transition-colors duration-200 border-b border-surface-variant">
+<div class="flex items-center gap-stack-md">
+<div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">credit_card</span>
+</div>
+<div class="font-label-lg text-label-lg text-on-surface">Metode Pembayaran</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-body-md text-body-md text-secondary">4 metode</span>
+<span class="material-symbols-outlined text-secondary">chevron_right</span>
+</div>
+</button>
+<button class="w-full p-stack-md flex items-center justify-between hover:bg-surface-container-low transition-colors duration-200">
+<div class="flex items-center gap-stack-md">
+<div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">link</span>
+</div>
+<div class="font-label-lg text-label-lg text-on-surface">Sumber Pemasukan</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-body-md text-body-md text-secondary">2 sumber</span>
+<span class="material-symbols-outlined text-secondary">chevron_right</span>
+</div>
+</button>
+</div>
+</section>
+<!-- Section: Spreadsheet & Sync -->
+<section class="mb-stack-lg">
+<div class="mb-stack-sm">
+<h3 class="font-title-md text-title-md text-on-surface">Spreadsheet &amp; Sync</h3>
+<p class="font-body-md text-body-md text-secondary">Setiap catatan langsung disimpan ke Sheet kamu via OAuth.</p>
+</div>
+<div class="w-full bg-surface-container-lowest rounded-2xl p-stack-md flex flex-col gap-stack-md border border-surface-variant shadow-sm text-left">
+<div class="flex items-center gap-stack-md">
+<div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 1;">description</span>
+</div>
+<div>
+<div class="font-label-lg text-label-lg text-on-surface">Spreadsheet Terhubung</div>
+<a class="font-body-md text-body-md text-primary flex items-center gap-1 mt-1 hover:underline" href="#">
+                CatatKas
+                <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+</a>
+</div>
+</div>
+<button class="text-expense-red font-label-lg text-label-lg font-semibold w-max hover:opacity-80 transition-opacity">
+        Putuskan
+    </button>
+</div>
+</section>
+<!-- Section: Tampilan -->
+<section class="mb-stack-lg">
+<div class="mb-stack-sm">
+<h3 class="font-title-md text-title-md text-on-surface">Tampilan</h3>
+<p class="font-body-md text-body-md text-secondary">Mode terang atau gelap.</p>
+</div>
+<div class="w-full bg-surface-container-lowest rounded-2xl p-stack-md flex flex-col gap-stack-md border border-surface-variant shadow-sm text-left">
+<div class="flex items-center gap-stack-md">
+<div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">palette</span>
+</div>
+<div class="font-label-lg text-label-lg text-on-surface">Tema</div>
+</div>
+<div class="flex bg-surface-container-low rounded-xl p-1 gap-1 w-full">
+<button class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-surface-container-lowest shadow-sm text-on-surface font-label-md transition-colors">
+<span class="material-symbols-outlined text-[18px]">light_mode</span>
+            Terang
+        </button>
+<button class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-secondary hover:bg-surface-container-lowest/50 hover:text-on-surface font-label-md transition-colors">
+<span class="material-symbols-outlined text-[18px]">dark_mode</span>
+            Gelap
+        </button>
+<button class="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-secondary hover:bg-surface-container-lowest/50 hover:text-on-surface font-label-md transition-colors">
+<span class="material-symbols-outlined text-[18px]">desktop_windows</span>
+            Sistem
+        </button>
+</div>
+</div>
+</section>
+<!-- Section: Otomasi -->
+<section class="mb-stack-lg">
+<div class="mb-stack-sm">
+<h3 class="font-title-md text-title-md text-on-surface">Otomasi</h3>
+<p class="font-body-md text-body-md text-secondary">Kelola data dan transaksi otomatis.</p>
+</div>
+<button class="w-full bg-surface-container-lowest rounded-2xl p-stack-md flex items-center justify-between border border-surface-variant shadow-sm hover:bg-surface-container-low transition-colors duration-200 text-left">
+<div class="flex items-center gap-stack-md">
+<div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">repeat</span>
+</div>
+<div class="font-label-lg text-label-lg text-on-surface">Transaksi Berulang</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-body-md text-body-md text-secondary">0 aktif</span>
+<span class="material-symbols-outlined text-secondary">chevron_right</span>
+</div>
+</button>
+</section>
+<!-- Section: Notifikasi -->
+<section class="mb-stack-lg">
+<div class="mb-stack-sm">
+<h3 class="font-title-md text-title-md text-on-surface">Notifikasi</h3>
+<p class="font-body-md text-body-md text-secondary">Pengingat catat harian.</p>
+</div>
+<button class="w-full bg-surface-container-lowest rounded-2xl p-stack-md flex items-center justify-between border border-surface-variant shadow-sm hover:bg-surface-container-low transition-colors duration-200 text-left">
+<div class="flex items-center gap-stack-md">
+<div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+</div>
+<div class="font-label-lg text-label-lg text-on-surface">Reminder Harian</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-body-md text-body-md text-secondary">Nonaktif</span>
+<span class="material-symbols-outlined text-secondary">chevron_right</span>
+</div>
+</button>
+</section>
+<!-- Section: Bantuan -->
+<section class="mb-stack-lg">
+<div class="mb-stack-sm">
+<h3 class="font-title-md text-title-md text-on-surface">Bantuan</h3>
+<p class="font-body-md text-body-md text-secondary">Butuh bantuan? Hubungi kami.</p>
+</div>
+<button class="w-full bg-surface-container-lowest rounded-2xl p-stack-md flex items-center justify-between border border-surface-variant shadow-sm hover:bg-surface-container-low transition-colors duration-200 text-left">
+<div class="flex items-center gap-stack-md">
+<div class="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">help</span>
+</div>
+<div class="font-label-lg text-label-lg text-on-surface">Pusat Bantuan</div>
+</div>
+<span class="material-symbols-outlined text-secondary">chevron_right</span>
+</button>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-surface-container/95 dark:bg-surface-container-highest/95 backdrop-blur-md shadow-lg md:hidden">
+<div class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 pb-safe">
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim px-5 py-1 hover:bg-secondary-container/50 dark:hover:bg-secondary/50 active:scale-95 transition-transform duration-150 rounded-2xl" href="#">
+<span class="material-symbols-outlined mb-1">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim px-5 py-1 hover:bg-secondary-container/50 dark:hover:bg-secondary/50 active:scale-95 transition-transform duration-150 rounded-2xl" href="#">
+<span class="material-symbols-outlined mb-1">add_circle</span>
+<span class="font-label-md text-label-md">Input</span>
+</a><a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim px-5 py-1 hover:bg-secondary-container/50 dark:hover:bg-secondary/50 active:scale-95 transition-transform duration-150 rounded-2xl" href="#">
+<span class="material-symbols-outlined mb-1">account_balance</span>
+<span class="font-label-md text-label-md">Pemasukan</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim px-5 py-1 hover:bg-secondary-container/50 dark:hover:bg-secondary/50 active:scale-95 transition-transform duration-150 rounded-2xl" href="#">
+<span class="material-symbols-outlined mb-1">history</span>
+<span class="font-label-md text-label-md">Riwayat</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim px-5 py-1 hover:bg-secondary-container/50 dark:hover:bg-secondary/50 active:scale-95 transition-transform duration-150 rounded-2xl" href="#">
+<span class="material-symbols-outlined mb-1">analytics</span>
+<span class="font-label-md text-label-md">Grafik</span>
+</a>
+</div>
+</nav>
+
+
+</body></html>

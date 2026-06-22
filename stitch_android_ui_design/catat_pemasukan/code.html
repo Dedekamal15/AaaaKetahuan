@@ -1,0 +1,361 @@
+<!DOCTYPE html><html lang="id" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport">
+<title>Catat Pemasukan - CatatKas</title>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "outline-variant": "#bfcaba",
+                      "secondary-fixed": "#cbe7f5",
+                      "on-tertiary": "#ffffff",
+                      "surface-tint": "#1b6d24",
+                      "outline": "#707a6c",
+                      "background": "#f8f9fa",
+                      "on-primary": "#ffffff",
+                      "on-secondary-fixed": "#021f29",
+                      "on-error": "#ffffff",
+                      "surface-container-high": "#e7e8e9",
+                      "error-container": "#ffdad6",
+                      "error": "#ba1a1a",
+                      "inverse-surface": "#2e3132",
+                      "surface-white": "#FFFFFF",
+                      "primary-container": "#2e7d32",
+                      "on-secondary-container": "#4e6874",
+                      "primary-fixed-dim": "#88d982",
+                      "on-surface-variant": "#40493d",
+                      "on-tertiary-container": "#c8ffbf",
+                      "surface-bright": "#f8f9fa",
+                      "tertiary-container": "#3a7b39",
+                      "on-error-container": "#93000a",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-container": "#edeeef",
+                      "tertiary": "#1f6223",
+                      "secondary-container": "#cbe7f5",
+                      "on-primary-container": "#cbffc2",
+                      "tertiary-fixed-dim": "#91d78a",
+                      "primary": "#0d631b",
+                      "inverse-primary": "#88d982",
+                      "expense-red": "#D32F2F",
+                      "on-tertiary-fixed-variant": "#0c5216",
+                      "tertiary-fixed": "#acf4a4",
+                      "on-primary-fixed": "#002204",
+                      "on-background": "#191c1d",
+                      "on-secondary": "#ffffff",
+                      "secondary-fixed-dim": "#afcbd8",
+                      "surface-variant": "#e1e3e4",
+                      "on-surface": "#191c1d",
+                      "surface-container-low": "#f3f4f5",
+                      "on-secondary-fixed-variant": "#304a55",
+                      "surface": "#f8f9fa",
+                      "inverse-on-surface": "#f0f1f2",
+                      "surface-container-highest": "#e1e3e4",
+                      "on-tertiary-fixed": "#002203",
+                      "secondary": "#48626e",
+                      "on-primary-fixed-variant": "#005312",
+                      "primary-fixed": "#a3f69c",
+                      "surface-dim": "#d9dadb"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin-tablet": "1.5rem",
+                      "margin-desktop": "2rem",
+                      "stack-lg": "1.5rem",
+                      "stack-sm": "0.5rem",
+                      "margin-mobile": "1rem",
+                      "gutter": "1rem",
+                      "stack-md": "1rem"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "title-md": [
+                              "Inter"
+                      ],
+                      "headline-sm": [
+                              "Inter"
+                      ],
+                      "label-lg": [
+                              "Inter"
+                      ],
+                      "title-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "title-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-lg": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.1px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "title-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.5px",
+                                      "fontWeight": "500"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom styles for the amount input to remove default arrows */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .pt-safe {
+            padding-top: env(safe-area-inset-top);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-lg min-h-screen flex flex-col antialiased">
+<!-- TopAppBar -->
+<header class="bg-surface w-full top-0 sticky z-40 transition-colors duration-200">
+<div class="flex items-center px-gutter h-16 w-full max-w-7xl mx-auto pt-safe">
+<button aria-label="Go back" class="mr-4 text-on-surface-variant hover:bg-surface-container-low rounded-full p-2 transition-colors duration-200">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-on-background flex-1">Catat Pemasukan</h1>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full max-w-3xl mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin-desktop py-stack-lg pb-32">
+<form class="flex flex-col gap-stack-lg">
+<!-- Amount Input Field -->
+<div class="bg-surface-white rounded-xl shadow-sm p-6 border border-outline-variant/30 relative">
+<label class="block font-label-md text-label-md text-secondary mb-2 uppercase tracking-wider" for="amount">Nominal</label>
+<div class="flex items-end border-b-2 border-outline-variant focus-within:border-primary transition-colors pb-2">
+<span class="font-headline-md text-headline-md text-on-surface-variant mr-2 mb-1">Rp</span>
+<input autofocus="" class="w-full bg-transparent border-none p-0 focus:ring-0 font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-background placeholder:text-surface-variant" id="amount" name="amount" placeholder="0" type="number">
+</div>
+</div>
+<!-- Optional Notes Field -->
+<div class="flex flex-col gap-2">
+<label class="flex items-center gap-2 font-label-md text-label-md text-secondary uppercase tracking-wider pl-1" for="notes">
+<div class="w-1 h-3 bg-outline-variant rounded-full"></div>
+                    Catatan (Opsional)
+                </label>
+<div class="bg-surface-white rounded-xl shadow-sm border border-outline-variant/50 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
+<input class="w-full bg-transparent border-none rounded-xl px-4 py-3 font-body-lg text-body-lg text-on-background placeholder:text-on-surface-variant/50 focus:ring-0" id="notes" name="notes" placeholder="Contoh: Gaji April" type="text">
+</div>
+</div>
+<!-- Date Picker Field -->
+<div class="flex flex-col gap-2">
+<label class="flex items-center gap-2 font-label-md text-label-md text-secondary uppercase tracking-wider pl-1" for="date">
+<div class="w-1 h-3 bg-outline-variant rounded-full"></div>
+                    Tanggal
+                </label>
+<div class="bg-surface-white rounded-xl shadow-sm border border-outline-variant/50 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all relative flex items-center px-4 py-3 cursor-pointer hover:bg-surface-container-lowest">
+<span class="material-symbols-outlined text-secondary mr-3 text-[20px]">calendar_today</span>
+<input class="w-full bg-transparent border-none p-0 font-body-lg text-body-lg text-on-background cursor-pointer focus:ring-0 outline-none" id="date" name="date" readonly="" type="text" value="Senin, 22 Jun 2026">
+</div>
+</div>
+<!-- Source Chips -->
+<div class="flex flex-col gap-2">
+<label class="flex items-center gap-2 font-label-md text-label-md text-secondary uppercase tracking-wider pl-1">
+<div class="w-1 h-3 bg-outline-variant rounded-full"></div>
+                    Sumber
+                </label>
+<div class="flex flex-wrap gap-3">
+<label class="cursor-pointer">
+<input checked="" class="peer sr-only" name="source" type="radio" value="Gaji">
+<div class="px-6 py-2 rounded-lg border border-outline-variant/50 font-body-md text-body-md text-secondary bg-surface-white peer-checked:bg-primary-container peer-checked:text-on-primary peer-checked:border-primary transition-colors hover:bg-surface-container-low">
+                            Gaji
+                        </div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="source" type="radio" value="Lainnya">
+<div class="px-6 py-2 rounded-lg border border-outline-variant/50 font-body-md text-body-md text-secondary bg-surface-white peer-checked:bg-primary-container peer-checked:text-on-primary peer-checked:border-primary transition-colors hover:bg-surface-container-low">
+                            Lainnya
+                        </div>
+</label>
+</div>
+</div><div class="flex flex-col gap-2">
+<label class="flex items-center gap-2 font-label-md text-label-md text-secondary uppercase tracking-wider pl-1">
+<div class="w-1 h-3 bg-outline-variant rounded-full"></div>
+                    Metode
+                </label>
+<div class="flex flex-wrap gap-3">
+<label class="cursor-pointer">
+<input checked="" class="peer sr-only" name="method" type="radio" value="Cash">
+<div class="px-6 py-2 rounded-lg border border-outline-variant/50 font-body-md text-body-md text-secondary bg-surface-white peer-checked:bg-primary-container peer-checked:text-on-primary peer-checked:border-primary transition-colors hover:bg-surface-container-low">
+                            Cash
+                        </div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="method" type="radio" value="Kredit">
+<div class="px-6 py-2 rounded-lg border border-outline-variant/50 font-body-md text-body-md text-secondary bg-surface-white peer-checked:bg-primary-container peer-checked:text-on-primary peer-checked:border-primary transition-colors hover:bg-surface-container-low">
+                            Kredit
+                        </div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="method" type="radio" value="E-Wallet">
+<div class="px-6 py-2 rounded-lg border border-outline-variant/50 font-body-md text-body-md text-secondary bg-surface-white peer-checked:bg-primary-container peer-checked:text-on-primary peer-checked:border-primary transition-colors hover:bg-surface-container-low">
+                            E-Wallet
+                        </div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="method" type="radio" value="Transfer Bank">
+<div class="px-6 py-2 rounded-lg border border-outline-variant/50 font-body-md text-body-md text-secondary bg-surface-white peer-checked:bg-primary-container peer-checked:text-on-primary peer-checked:border-primary transition-colors hover:bg-surface-container-low">
+                            Transfer Bank
+                        </div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="method" type="radio" value="QRIS">
+<div class="px-6 py-2 rounded-lg border border-outline-variant/50 font-body-md text-body-md text-secondary bg-surface-white peer-checked:bg-primary-container peer-checked:text-on-primary peer-checked:border-primary transition-colors hover:bg-surface-container-low flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">qr_code_2</span>
+                            QRIS
+                        </div>
+</label></div>
+</div>
+</form>
+<!-- Save Button Fixed Area -->
+<div class="fixed bottom-[80px] md:bottom-6 left-0 w-full px-margin-mobile md:px-margin-tablet lg:max-w-3xl lg:left-1/2 lg:-translate-x-1/2 z-30 pb-safe">
+<button class="w-full bg-primary hover:bg-tertiary text-on-primary font-title-md text-title-md py-4 rounded-full shadow-lg transition-transform duration-150 active:scale-95 flex items-center justify-center gap-2">
+                Simpan
+            </button>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden bg-surface-container/95 backdrop-blur-md shadow-lg fixed bottom-0 w-full z-50 rounded-t-xl transition-transform duration-150">
+<div class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-3 pb-safe">
+<a class="flex flex-col items-center justify-center text-secondary px-5 py-1 hover:bg-secondary-container/50 rounded-xl transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[24px]">dashboard</span>
+<span class="font-label-md text-[10px] mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary px-5 py-1 hover:bg-secondary-container/50 rounded-xl transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[24px]">add_circle</span>
+<span class="font-label-md text-[10px] mt-1">Input</span>
+</a><a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-2xl px-5 py-1 active:scale-95 transition-transform duration-150 shadow-sm" href="#">
+<span class="material-symbols-outlined text-[24px]" data-weight="fill">account_balance_wallet</span>
+<span class="font-label-md text-[10px] mt-1 font-semibold">Pemasukan</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary px-5 py-1 hover:bg-secondary-container/50 rounded-xl transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[24px]">history</span>
+<span class="font-label-md text-[10px] mt-1">Riwayat</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary px-5 py-1 hover:bg-secondary-container/50 rounded-xl transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[24px]">analytics</span>
+<span class="font-label-md text-[10px] mt-1">Grafik</span>
+</a>
+</div>
+</nav>
+<script>
+        // Simple script to format number input with thousand separators (optional enhancement)
+        const amountInput = document.getElementById('amount');
+        amountInput.addEventListener('input', function(e) {
+            // Allow only numbers
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    </script>
+
+
+
+
+</body></html>

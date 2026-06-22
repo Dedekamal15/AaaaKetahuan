@@ -21,10 +21,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.ArrowCircleUp
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -55,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.aaaaketahuan.data.model.KategoriEnum
+import com.example.aaaaketahuan.data.model.MetodeBayarEnum
 import com.example.aaaaketahuan.ui.components.AutocompleteTextField
 import com.example.aaaaketahuan.ui.components.getKategoriIcon
 import com.example.aaaaketahuan.ui.theme.ExpenseRed
@@ -80,6 +86,7 @@ fun InputTransaksiScreen(
     var namaBarang by remember { mutableStateOf("") }
     var keterangan by remember { mutableStateOf("") }
     var selectedKategori by remember { mutableStateOf(KategoriEnum.MAKANAN) }
+    var selectedMetodeBayar by remember { mutableStateOf(MetodeBayarEnum.CASH) }
     var tanggal by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)) }
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -345,6 +352,71 @@ fun InputTransaksiScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Metode Pembayaran Grid
+                Text(
+                    text = "Metode Pembayaran",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Column {
+                    val metodeChunked = MetodeBayarEnum.entries.chunked(3)
+                    metodeChunked.forEach { rowItems ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            rowItems.forEach { metode ->
+                                val isSelected = selectedMetodeBayar == metode
+                                val bgColor by animateColorAsState(
+                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceContainerLow
+                                )
+                                val textColor by animateColorAsState(
+                                    if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                val borderColor by animateColorAsState(
+                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.outlineVariant
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(bgColor)
+                                        .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+                                        .clickable { selectedMetodeBayar = metode }
+                                        .padding(vertical = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(
+                                            imageVector = getMetodeIcon(metode.label),
+                                            contentDescription = null,
+                                            tint = textColor
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = metode.label,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = textColor
+                                        )
+                                    }
+                                }
+                            }
+                            // Fill empty space for uneven rows
+                            repeat(3 - rowItems.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 // Date Picker
                 Text(
                     text = "Tanggal",
@@ -400,7 +472,8 @@ fun InputTransaksiScreen(
                                 namaBarang = namaBarang,
                                 keterangan = keterangan,
                                 kategori = selectedKategori.label,
-                                tanggal = tanggal
+                                tanggal = tanggal,
+                                metodeBayar = selectedMetodeBayar.label
                             )
                             // Reset form
                             nominal = ""
@@ -472,5 +545,16 @@ fun InputTransaksiScreen(
 
     // Snackbar Host
     SnackbarHost(hostState = snackbarHostState)
+}
+
+fun getMetodeIcon(metode: String): ImageVector {
+    return when (metode.lowercase()) {
+        "cash" -> Icons.Default.Payments
+        "kredit" -> Icons.Default.CreditCard
+        "e-wallet" -> Icons.Default.AccountBalanceWallet
+        "transfer" -> Icons.Default.AccountBalance
+        "qris" -> Icons.Default.QrCode2
+        else -> Icons.Default.Payments
+    }
 }
 
