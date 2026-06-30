@@ -17,11 +17,31 @@ import java.util.Collections
 class GoogleSheetsHelper(private val context: Context) {
 
     companion object {
-        // Spreadsheet ID from URL: https://docs.google.com/spreadsheets/d/13aeG7h75xREgcmgs1QUOj6gXfjkvvFVmtlfyny9r3sk
-        private const val SPREADSHEET_ID = "13aeG7h75xREgcmgs1QUOj6gXfjkvvFVmtlfyny9r3sk"
-        private const val SHEET_NAME = "Sheet1"
-        private const val RANGE = "$SHEET_NAME!A:I"
         private const val APPLICATION_NAME = "AaaaKetahuan"
+        const val DEFAULT_SPREADSHEET_ID = "13aeG7h75xREgcmgs1QUOj6gXfjkvvFVmtlfyny9r3sk"
+        const val DEFAULT_SHEET_NAME = "Sheet1"
+    }
+
+    /** Dynamic spreadsheet config — can be updated via updateConfig() */
+    var spreadsheetId: String = DEFAULT_SPREADSHEET_ID
+    var sheetName: String = DEFAULT_SHEET_NAME
+    private val range: String get() = "$sheetName!A:I"
+
+    /**
+     * Updates the spreadsheet target configuration.
+     * Falls back to defaults if blank values are provided.
+     */
+    fun updateConfig(spreadsheetId: String?, sheetName: String?) {
+        if (!spreadsheetId.isNullOrBlank()) this.spreadsheetId = spreadsheetId
+        if (!sheetName.isNullOrBlank()) this.sheetName = sheetName
+    }
+
+    /**
+     * Resets spreadsheet config to default.
+     */
+    fun resetConfig() {
+        spreadsheetId = DEFAULT_SPREADSHEET_ID
+        sheetName = DEFAULT_SHEET_NAME
     }
 
     private fun getCredentials(): GoogleCredentials {
@@ -40,6 +60,18 @@ class GoogleSheetsHelper(private val context: Context) {
             .build()
     }
 
+    private fun buildRow(transaksi: Transaksi): List<Any> = listOf(
+        transaksi.id,
+        transaksi.tanggal,
+        transaksi.jenis,
+        transaksi.jumlah.toString(),
+        transaksi.namaBarang,
+        transaksi.keterangan,
+        transaksi.kategori,
+        transaksi.bulan.toString(),
+        transaksi.tahun.toString()
+    )
+
     /**
      * Appends a single transaction row to the spreadsheet.
      * Column order: ID, Tanggal, Jenis, Jumlah, NamaBarang, Keterangan, Kategori, Bulan, Tahun
@@ -47,22 +79,11 @@ class GoogleSheetsHelper(private val context: Context) {
     suspend fun appendRow(transaksi: Transaksi): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val service = getSheetsService()
-            val row = listOf<Any>(
-                transaksi.id,
-                transaksi.tanggal,
-                transaksi.jenis,
-                transaksi.jumlah.toString(),
-                transaksi.namaBarang,
-                transaksi.keterangan,
-                transaksi.kategori,
-                transaksi.bulan.toString(),
-                transaksi.tahun.toString()
-            )
-            val values = listOf(row)
+            val values = listOf(buildRow(transaksi))
             val body = ValueRange().setValues(values)
 
             service.spreadsheets().values()
-                .append(SPREADSHEET_ID, RANGE, body)
+                .append(spreadsheetId, range, body)
                 .setValueInputOption("USER_ENTERED")
                 .execute()
 
@@ -78,23 +99,11 @@ class GoogleSheetsHelper(private val context: Context) {
     suspend fun appendRows(transaksiList: List<Transaksi>): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val service = getSheetsService()
-            val values: List<List<Any>> = transaksiList.map { transaksi ->
-                listOf(
-                    transaksi.id,
-                    transaksi.tanggal,
-                    transaksi.jenis,
-                    transaksi.jumlah.toString(),
-                    transaksi.namaBarang,
-                    transaksi.keterangan,
-                    transaksi.kategori,
-                    transaksi.bulan.toString(),
-                    transaksi.tahun.toString()
-                )
-            }
+            val values: List<List<Any>> = transaksiList.map { buildRow(it) }
             val body = ValueRange().setValues(values)
 
             service.spreadsheets().values()
-                .append(SPREADSHEET_ID, RANGE, body)
+                .append(spreadsheetId, range, body)
                 .setValueInputOption("USER_ENTERED")
                 .execute()
 
@@ -105,12 +114,12 @@ class GoogleSheetsHelper(private val context: Context) {
     }
 
     /**
-     * Checks if the spreadsheet is accessible.
+     * Checks if the configured spreadsheet is accessible.
      */
     suspend fun testConnection(): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
             val service = getSheetsService()
-            service.spreadsheets().get(SPREADSHEET_ID).execute()
+            service.spreadsheets().get(spreadsheetId).execute()
             Result.success(true)
         } catch (e: Exception) {
             Result.failure(e)

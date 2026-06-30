@@ -1,6 +1,8 @@
 package com.example.aaaaketahuan.data.repository
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.SharedPreferences
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -18,11 +20,23 @@ class TransaksiRepository @Inject constructor(
     private val context: Context,
     private val sheetsHelper: GoogleSheetsHelper
 ) {
+    private val prefs: SharedPreferences
+        get() = context.getSharedPreferences("aaaaketahuan_config", Context.MODE_PRIVATE)
+
     private val transaksiFile: File
         get() = File(context.filesDir, "transaksi.json")
 
     private val freqFile: File
         get() = File(context.filesDir, "nama_barang_freq.json")
+
+    private var configLoaded = false
+
+    private fun ensureConfigLoaded() {
+        if (!configLoaded) {
+            loadSpreadsheetConfigToHelper()
+            configLoaded = true
+        }
+    }
 
     private fun isNetworkAvailable(): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -40,6 +54,7 @@ class TransaksiRepository @Inject constructor(
      * If sync fails or no internet, marks isSynced = false for later retry.
      */
     suspend fun simpanTransaksi(transaksi: Transaksi) = withContext(Dispatchers.IO) {
+        ensureConfigLoaded()
         // Determine sync status based on network availability
         val hasNetwork = isNetworkAvailable()
         transaksi.isSynced = false // Will be updated after sync attempt
@@ -117,6 +132,7 @@ class TransaksiRepository @Inject constructor(
      * Returns the number of successfully synced transactions.
      */
     suspend fun syncPendingTransactions(): Int = withContext(Dispatchers.IO) {
+        ensureConfigLoaded()
         if (!isNetworkAvailable()) return@withContext 0
 
         val allTransaksi = JsonHelper.bacaTransaksi(transaksiFile)
@@ -168,5 +184,53 @@ class TransaksiRepository @Inject constructor(
         JsonHelper.simpanFrekuensi(freqFile, freq)
 
         result.successCount
+    }
+
+    // ─── Spreadsheet Config ──────────────────────────────────────────
+
+    fun getSpreadsheetId(): String {
+        return prefs.getString(KEY_SPREADSHEET_ID, sheetsHelper.spreadsheetId) ?: sheetsHelper.spreadsheetId
+    }
+
+    fun getSheetName(): String {
+        return prefs.getString(KEY_SHEET_NAME, sheetsHelper.sheetName) ?: sheetsHelper.sheetName
+    }
+
+    fun isSpreadsheetConnected(): Boolean {
+        return getSpreadsheetId().isNotBlank()
+    }
+
+    @SuppressLint("CommitPrefEdits")
+    fun connectSpreadsheet(spreadsheetId: String, sheetName: String = "Sheet1") {
+        prefs.edit()
+            .putString(KEY_SPREADSHEET_ID, spreadsheetId)
+            .putString(KEY_SHEET_NAME, sheetName)
+            .apply()
+        sheetsHelper.updateConfig(spreadsheetId, sheetName)
+    }
+
+    @SuppressLint("CommitPrefEdits")
+    fun disconnectSpreadsheet() {
+        prefs.edit()
+            .remove(KEY_SPREADSHEET_ID)
+            .remove(KEY_SHEET_NAME)
+            .apply()
+        sheetsHelper.resetConfig()
+    }
+
+    fun loadSpreadsheetConfigToHelper() {
+        val id = getSpreadsheetId()
+        val name = getSheetName()
+        sheetsHelper.updateConfig(id, name)
+    }
+
+    suspend fun testSpreadsheetConnection(): Result<Boolean> {
+        loadSpreadsheetConfigToHelper()
+        return sheetsHelper.testConnection()
+    }
+
+    companion object {
+        private const val KEY_SPREADSHEET_ID = "spreadsheet_id"
+        private const val KEY_SHEET_NAME = "sheet_name"
     }
 }

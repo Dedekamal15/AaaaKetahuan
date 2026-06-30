@@ -212,6 +212,39 @@ class TransaksiViewModel @Inject constructor(
             .mapValues { (_, list) -> list.sumOf { it.jumlah } }
     }
 
+    // ─── Spreadsheet Config ──────────────────────────────────────────
+
+    fun getSpreadsheetConfig(): Pair<String, String> {
+        return Pair(repository.getSpreadsheetId(), repository.getSheetName())
+    }
+
+    fun isSpreadsheetConnected(): Boolean {
+        return repository.isSpreadsheetConnected()
+    }
+
+    fun connectSpreadsheet(spreadsheetId: String, sheetName: String = "Sheet1") {
+        repository.connectSpreadsheet(spreadsheetId, sheetName)
+    }
+
+    fun disconnectSpreadsheet() {
+        repository.disconnectSpreadsheet()
+    }
+
+    fun testSpreadsheetConnection(onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val result = repository.testSpreadsheetConnection()
+                if (result.isSuccess) {
+                    onResult(true, null)
+                } else {
+                    onResult(false, result.exceptionOrNull()?.message ?: "Gagal terhubung")
+                }
+            } catch (e: Exception) {
+                onResult(false, e.message ?: "Gagal terhubung")
+            }
+        }
+    }
+
     /**
      * Retry syncing all unsynced transactions to Google Sheets.
      */

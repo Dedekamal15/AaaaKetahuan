@@ -16,243 +16,487 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.aaaaketahuan.ui.theme.ExpenseRed
 import com.example.aaaaketahuan.viewmodel.TransaksiViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun PengaturanScreen(
     viewModel: TransaksiViewModel,
     onBack: () -> Unit = {}
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     var selectedTheme by remember { mutableStateOf("terang") }
+
+    // Spreadsheet state
+    var spreadsheetId by remember { mutableStateOf("") }
+    var sheetName by remember { mutableStateOf("Sheet1") }
+    var isConnected by remember { mutableStateOf(false) }
+    var showConnectDialog by remember { mutableStateOf(false) }
+    var showDisconnectDialog by remember { mutableStateOf(false) }
+    var isTestingConnection by remember { mutableStateOf(false) }
+    var testResult by remember { mutableStateOf<String?>(null) }
+
+    // Load current config
+    LaunchedEffect(Unit) {
+        val config = viewModel.getSpreadsheetConfig()
+        spreadsheetId = config.first
+        sheetName = config.second
+        isConnected = viewModel.isSpreadsheetConnected()
+    }
 
     val scrollState = rememberScrollState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(16.dp)
-            .padding(bottom = 80.dp)
-    ) {
-        // Header
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.AccountBalanceWallet,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "AaaaKetahuan",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Section: Kategori & Sumber
-        SettingsSection(
-            title = "Kategori & Sumber",
-            subtitle = "Disinkron juga ke konfigurasi Sheet kamu."
+    androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(16.dp)
+                .padding(bottom = 80.dp)
         ) {
-            SettingsCard {
-                SettingsItem(
-                    icon = Icons.Default.Label,
-                    label = "Kategori",
-                    value = "10 kategori"
+            // Header
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.AccountBalanceWallet,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
                 )
-                SettingsItem(
-                    icon = Icons.Default.CreditCard,
-                    label = "Metode Pembayaran",
-                    value = "5 metode"
-                )
-                SettingsItem(
-                    icon = Icons.Default.Link,
-                    label = "Sumber Pemasukan",
-                    value = "2 sumber",
-                    showDivider = false
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "AaaaKetahuan",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
-        }
 
-        // Section: Spreadsheet & Sync
-        SettingsSection(
-            title = "Spreadsheet & Sync",
-            subtitle = "Setiap catatan langsung disimpan ke Sheet kamu via OAuth."
-        ) {
-            SettingsCard {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.AccountBalanceWallet,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ─── Spreadsheet & Sync Section ──────────────────────────────
+            SettingsSection(
+                title = "Spreadsheet & Sync",
+                subtitle = "Hubungkan Google Spreadsheet untuk sinkronisasi data."
+            ) {
+                SettingsCard {
+                    // Connection status
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            if (isConnected) Icons.Default.Cloud else Icons.Default.CloudOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = if (isConnected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (isConnected) "Spreadsheet Terhubung"
+                                else "Belum Terhubung",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (isConnected) {
+                                Text(
+                                    text = spreadsheetId,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            } else {
+                                Text(
+                                    text = "Hubungkan untuk sync otomatis",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+
+                    // Action buttons
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Connect / Change button
+                        OutlinedButton(
+                            onClick = { showConnectDialog = true },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                if (isConnected) Icons.Default.CloudSync else Icons.Default.Link,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(if (isConnected) "Ganti" else "Hubungkan")
+                        }
+
+                        // Test button
+                        OutlinedButton(
+                            onClick = {
+                                isTestingConnection = true
+                                testResult = null
+                                viewModel.testSpreadsheetConnection { success, message ->
+                                    isTestingConnection = false
+                                    testResult = if (success) "Koneksi berhasil!"
+                                    else "Gagal: ${message ?: "Tidak diketahui"}"
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(testResult ?: "")
+                                    }
+                                    testResult = null
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = isConnected && !isTestingConnection
+                        ) {
+                            if (isTestingConnection) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Uji Koneksi")
+                        }
+
+                        // Disconnect button
+                        if (isConnected) {
+                            OutlinedButton(
+                                onClick = { showDisconnectDialog = true },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = ExpenseRed
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Default.LinkOff,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Putuskan")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ─── Kategori & Sumber Section ─────────────────────────────
+            SettingsSection(
+                title = "Kategori & Sumber",
+                subtitle = "Disinkron juga ke konfigurasi Sheet kamu."
+            ) {
+                SettingsCard {
+                    SettingsItem(
+                        icon = Icons.Default.Label,
+                        label = "Kategori",
+                        value = "10 kategori"
+                    )
+                    SettingsItem(
+                        icon = Icons.Default.CreditCard,
+                        label = "Metode Pembayaran",
+                        value = "5 metode"
+                    )
+                    SettingsItem(
+                        icon = Icons.Default.Link,
+                        label = "Sumber Pemasukan",
+                        value = "2 sumber",
+                        showDivider = false
+                    )
+                }
+            }
+
+            // ─── Tampilan Section ──────────────────────────────────────
+            SettingsSection(
+                title = "Tampilan",
+                subtitle = "Mode terang atau gelap."
+            ) {
+                SettingsCard {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Palette,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Spreadsheet Terhubung",
+                            text = "Tema",
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "AaaaKetahuan",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            modifier = Modifier.weight(1f)
                         )
                     }
-                    TextButton(onClick = { /* disconnect */ }) {
-                        Text(
-                            text = "Putuskan",
-                            color = ExpenseRed,
-                            fontWeight = FontWeight.Bold
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ThemeButton(
+                            label = "Terang",
+                            icon = Icons.Default.LightMode,
+                            selected = selectedTheme == "terang",
+                            onClick = { selectedTheme = "terang" },
+                            modifier = Modifier.weight(1f)
+                        )
+                        ThemeButton(
+                            label = "Gelap",
+                            icon = Icons.Default.DarkMode,
+                            selected = selectedTheme == "gelap",
+                            onClick = { selectedTheme = "gelap" },
+                            modifier = Modifier.weight(1f)
+                        )
+                        ThemeButton(
+                            label = "Sistem",
+                            icon = Icons.Default.Computer,
+                            selected = selectedTheme == "sistem",
+                            onClick = { selectedTheme = "sistem" },
+                            modifier = Modifier.weight(1f)
                         )
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+
+            // ─── Otomasi Section ───────────────────────────────────────
+            SettingsSection(
+                title = "Otomasi",
+                subtitle = "Kelola data dan transaksi otomatis."
+            ) {
+                SettingsCard {
+                    SettingsItem(
+                        icon = Icons.Default.Repeat,
+                        label = "Transaksi Berulang",
+                        value = "0 aktif",
+                        showDivider = false
+                    )
+                }
+            }
+
+            // ─── Notifikasi Section ────────────────────────────────────
+            SettingsSection(
+                title = "Notifikasi",
+                subtitle = "Pengingat catat harian."
+            ) {
+                SettingsCard {
+                    SettingsItem(
+                        icon = Icons.Default.Notifications,
+                        label = "Reminder Harian",
+                        value = "Nonaktif",
+                        showDivider = false
+                    )
+                }
+            }
+
+            // ─── Bantuan Section ───────────────────────────────────────
+            SettingsSection(
+                title = "Bantuan",
+                subtitle = "Butuh bantuan? Hubungi kami."
+            ) {
+                SettingsCard {
+                    SettingsItem(
+                        icon = Icons.Default.Help,
+                        label = "Pusat Bantuan",
+                        value = "",
+                        showDivider = false
+                    )
                 }
             }
         }
 
-        // Section: Tampilan
-        SettingsSection(
-            title = "Tampilan",
-            subtitle = "Mode terang atau gelap."
-        ) {
-            SettingsCard {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Palette,
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
+        // Snackbar
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    }
+
+    // ─── Connect Dialog ───────────────────────────────────────────────
+    if (showConnectDialog) {
+        var inputId by remember { mutableStateOf(spreadsheetId.ifBlank { "" }) }
+        var inputSheet by remember { mutableStateOf(sheetName) }
+
+        AlertDialog(
+            onDismissRequest = { showConnectDialog = false },
+            title = {
+                Text(
+                    text = if (isConnected) "Ganti Spreadsheet" else "Hubungkan Spreadsheet"
+                )
+            },
+            text = {
+                Column {
                     Text(
-                        text = "Tema",
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.weight(1f)
+                        text = "Masukkan ID Spreadsheet dari URL Google Sheets Anda.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Contoh: dari URL docs.google.com/spreadsheets/d/**13aeG7h...**/edit",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = inputId,
+                        onValueChange = { inputId = it },
+                        label = { Text("Spreadsheet ID") },
+                        placeholder = { Text("13aeG7h75xREgcmgs1QUOj6gXfjkvvFVmtlfyny9r3sk") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = inputSheet,
+                        onValueChange = { inputSheet = it },
+                        label = { Text("Nama Sheet") },
+                        placeholder = { Text("Sheet1") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
                     )
                 }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (inputId.isNotBlank()) {
+                            viewModel.connectSpreadsheet(inputId.trim(), inputSheet.trim().ifBlank { "Sheet1" })
+                            spreadsheetId = inputId.trim()
+                            sheetName = inputSheet.trim().ifBlank { "Sheet1" }
+                            isConnected = true
+                            showConnectDialog = false
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Spreadsheet berhasil dihubungkan!")
+                            }
+                        }
+                    },
+                    enabled = inputId.isNotBlank()
                 ) {
-                    ThemeButton(
-                        label = "Terang",
-                        icon = Icons.Default.LightMode,
-                        selected = selectedTheme == "terang",
-                        onClick = { selectedTheme = "terang" },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ThemeButton(
-                        label = "Gelap",
-                        icon = Icons.Default.DarkMode,
-                        selected = selectedTheme == "gelap",
-                        onClick = { selectedTheme = "gelap" },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ThemeButton(
-                        label = "Sistem",
-                        icon = Icons.Default.Computer,
-                        selected = selectedTheme == "sistem",
-                        onClick = { selectedTheme = "sistem" },
-                        modifier = Modifier.weight(1f)
-                    )
+                    Text("Hubungkan")
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+            },
+            dismissButton = {
+                TextButton(onClick = { showConnectDialog = false }) {
+                    Text("Batal")
+                }
             }
-        }
+        )
+    }
 
-        // Section: Otomasi
-        SettingsSection(
-            title = "Otomasi",
-            subtitle = "Kelola data dan transaksi otomatis."
-        ) {
-            SettingsCard {
-                SettingsItem(
-                    icon = Icons.Default.Repeat,
-                    label = "Transaksi Berulang",
-                    value = "0 aktif",
-                    showDivider = false
-                )
+    // ─── Disconnect Confirmation Dialog ─────────────────────────────
+    if (showDisconnectDialog) {
+        AlertDialog(
+            onDismissRequest = { showDisconnectDialog = false },
+            title = { Text("Putuskan Spreadsheet") },
+            text = {
+                Text("Data transaksi tetap aman tersimpan secara lokal. " +
+                        "Sinkronisasi otomatis ke spreadsheet akan berhenti.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.disconnectSpreadsheet()
+                        spreadsheetId = ""
+                        isConnected = false
+                        showDisconnectDialog = false
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Spreadsheet diputuskan")
+                        }
+                    }
+                ) {
+                    Text("Putuskan", color = ExpenseRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDisconnectDialog = false }) {
+                    Text("Batal")
+                }
             }
-        }
-
-        // Section: Notifikasi
-        SettingsSection(
-            title = "Notifikasi",
-            subtitle = "Pengingat catat harian."
-        ) {
-            SettingsCard {
-                SettingsItem(
-                    icon = Icons.Default.Notifications,
-                    label = "Reminder Harian",
-                    value = "Nonaktif",
-                    showDivider = false
-                )
-            }
-        }
-
-        // Section: Bantuan
-        SettingsSection(
-            title = "Bantuan",
-            subtitle = "Butuh bantuan? Hubungi kami."
-        ) {
-            SettingsCard {
-                SettingsItem(
-                    icon = Icons.Default.Help,
-                    label = "Pusat Bantuan",
-                    value = "",
-                    showDivider = false
-                )
-            }
-        }
+        )
     }
 }
+
+// ─── Reusable Components ──────────────────────────────────────────────
 
 @Composable
 private fun SettingsSection(
@@ -292,7 +536,7 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 private fun SettingsItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String,
     value: String,
     showDivider: Boolean = true
@@ -330,7 +574,7 @@ private fun SettingsItem(
         )
     }
     if (showDivider) {
-        androidx.compose.material3.HorizontalDivider(
+        HorizontalDivider(
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
         )
     }
@@ -339,7 +583,7 @@ private fun SettingsItem(
 @Composable
 private fun ThemeButton(
     label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
