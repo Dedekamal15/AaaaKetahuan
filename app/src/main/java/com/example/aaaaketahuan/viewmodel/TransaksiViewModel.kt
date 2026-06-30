@@ -48,6 +48,9 @@ class TransaksiViewModel @Inject constructor(
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
+    private val _themeMode = MutableStateFlow("system")
+    val themeMode: StateFlow<String> = _themeMode.asStateFlow()
+
     val totalMasuk: StateFlow<Double> = _transaksiList
         .map { list -> list.filter { it.jenis == "masuk" }.sumOf { it.jumlah } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
@@ -64,6 +67,7 @@ class TransaksiViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
     init {
+        _themeMode.value = repository.getThemeMode()
         loadTransaksi()
         syncPending()
         setupAutocompleteSearch()
@@ -188,6 +192,11 @@ class TransaksiViewModel @Inject constructor(
                 _errorMessage.value = "Gagal import CSV: ${e.message}"
             }
         }
+    }
+
+    fun setThemeMode(mode: String) {
+        repository.setThemeMode(mode)
+        _themeMode.value = mode
     }
 
     fun clearError() {

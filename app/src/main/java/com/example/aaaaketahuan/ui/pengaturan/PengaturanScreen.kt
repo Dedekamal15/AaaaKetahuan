@@ -1,6 +1,8 @@
 package com.example.aaaaketahuan.ui.pengaturan
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -16,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudOff
@@ -50,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,6 +65,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.aaaaketahuan.data.model.KategoriEnum
+import com.example.aaaaketahuan.data.model.MetodeBayarEnum
+import com.example.aaaaketahuan.data.model.SumberPemasukanEnum
 import com.example.aaaaketahuan.ui.theme.ExpenseRed
 import com.example.aaaaketahuan.viewmodel.TransaksiViewModel
 import kotlinx.coroutines.launch
@@ -72,8 +79,7 @@ fun PengaturanScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-
-    var selectedTheme by remember { mutableStateOf("terang") }
+    val themeMode by viewModel.themeMode.collectAsState()
 
     // Spreadsheet state
     var spreadsheetId by remember { mutableStateOf("") }
@@ -82,7 +88,6 @@ fun PengaturanScreen(
     var showConnectDialog by remember { mutableStateOf(false) }
     var showDisconnectDialog by remember { mutableStateOf(false) }
     var isTestingConnection by remember { mutableStateOf(false) }
-    var testResult by remember { mutableStateOf<String?>(null) }
 
     // Load current config
     LaunchedEffect(Unit) {
@@ -94,7 +99,7 @@ fun PengaturanScreen(
 
     val scrollState = rememberScrollState()
 
-    androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -102,8 +107,14 @@ fun PengaturanScreen(
                 .padding(16.dp)
                 .padding(bottom = 80.dp)
         ) {
-            // Header
+            // ─── Header with Back Button ───────────────────────────────
             Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.Default.ArrowBack,
+                        contentDescription = "Kembali"
+                    )
+                }
                 Icon(
                     imageVector = Icons.Default.AccountBalanceWallet,
                     contentDescription = null,
@@ -112,7 +123,7 @@ fun PengaturanScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "AaaaKetahuan",
+                    text = "Pengaturan",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -178,7 +189,6 @@ fun PengaturanScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Connect / Change button
                         OutlinedButton(
                             onClick = { showConnectDialog = true },
                             modifier = Modifier.weight(1f),
@@ -193,19 +203,17 @@ fun PengaturanScreen(
                             Text(if (isConnected) "Ganti" else "Hubungkan")
                         }
 
-                        // Test button
                         OutlinedButton(
                             onClick = {
                                 isTestingConnection = true
-                                testResult = null
                                 viewModel.testSpreadsheetConnection { success, message ->
                                     isTestingConnection = false
-                                    testResult = if (success) "Koneksi berhasil!"
-                                    else "Gagal: ${message ?: "Tidak diketahui"}"
                                     scope.launch {
-                                        snackbarHostState.showSnackbar(testResult ?: "")
+                                        snackbarHostState.showSnackbar(
+                                            if (success) "Koneksi berhasil!"
+                                            else "Gagal: ${message ?: "Tidak diketahui"}"
+                                        )
                                     }
-                                    testResult = null
                                 }
                             },
                             modifier = Modifier.weight(1f),
@@ -228,7 +236,6 @@ fun PengaturanScreen(
                             Text("Uji Koneksi")
                         }
 
-                        // Disconnect button
                         if (isConnected) {
                             OutlinedButton(
                                 onClick = { showDisconnectDialog = true },
@@ -253,24 +260,39 @@ fun PengaturanScreen(
             // ─── Kategori & Sumber Section ─────────────────────────────
             SettingsSection(
                 title = "Kategori & Sumber",
-                subtitle = "Disinkron juga ke konfigurasi Sheet kamu."
+                subtitle = "Atur kategori, metode bayar, dan sumber pemasukan."
             ) {
                 SettingsCard {
                     SettingsItem(
                         icon = Icons.Default.Label,
                         label = "Kategori",
-                        value = "10 kategori"
+                        value = "${KategoriEnum.entries.size} kategori",
+                        onClick = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Fitur ini akan segera hadir")
+                            }
+                        }
                     )
                     SettingsItem(
                         icon = Icons.Default.CreditCard,
                         label = "Metode Pembayaran",
-                        value = "5 metode"
+                        value = "${MetodeBayarEnum.entries.size} metode",
+                        onClick = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Fitur ini akan segera hadir")
+                            }
+                        }
                     )
                     SettingsItem(
                         icon = Icons.Default.Link,
                         label = "Sumber Pemasukan",
-                        value = "2 sumber",
-                        showDivider = false
+                        value = "${SumberPemasukanEnum.entries.size} sumber",
+                        showDivider = false,
+                        onClick = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Fitur ini akan segera hadir")
+                            }
+                        }
                     )
                 }
             }
@@ -278,7 +300,7 @@ fun PengaturanScreen(
             // ─── Tampilan Section ──────────────────────────────────────
             SettingsSection(
                 title = "Tampilan",
-                subtitle = "Mode terang atau gelap."
+                subtitle = "Pilih tema terang, gelap, atau ikuti sistem."
             ) {
                 SettingsCard {
                     Row(
@@ -295,9 +317,18 @@ fun PengaturanScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Tema",
+                            text = "Tema Aplikasi",
                             style = MaterialTheme.typography.labelLarge,
                             modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = when (themeMode) {
+                                "light" -> "Terang"
+                                "dark" -> "Gelap"
+                                else -> "Sistem"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                     Row(
@@ -309,22 +340,22 @@ fun PengaturanScreen(
                         ThemeButton(
                             label = "Terang",
                             icon = Icons.Default.LightMode,
-                            selected = selectedTheme == "terang",
-                            onClick = { selectedTheme = "terang" },
+                            selected = themeMode == "light",
+                            onClick = { viewModel.setThemeMode("light") },
                             modifier = Modifier.weight(1f)
                         )
                         ThemeButton(
                             label = "Gelap",
                             icon = Icons.Default.DarkMode,
-                            selected = selectedTheme == "gelap",
-                            onClick = { selectedTheme = "gelap" },
+                            selected = themeMode == "dark",
+                            onClick = { viewModel.setThemeMode("dark") },
                             modifier = Modifier.weight(1f)
                         )
                         ThemeButton(
                             label = "Sistem",
                             icon = Icons.Default.Computer,
-                            selected = selectedTheme == "sistem",
-                            onClick = { selectedTheme = "sistem" },
+                            selected = themeMode == "system",
+                            onClick = { viewModel.setThemeMode("system") },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -342,7 +373,12 @@ fun PengaturanScreen(
                         icon = Icons.Default.Repeat,
                         label = "Transaksi Berulang",
                         value = "0 aktif",
-                        showDivider = false
+                        showDivider = false,
+                        onClick = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Fitur ini akan segera hadir")
+                            }
+                        }
                     )
                 }
             }
@@ -357,7 +393,12 @@ fun PengaturanScreen(
                         icon = Icons.Default.Notifications,
                         label = "Reminder Harian",
                         value = "Nonaktif",
-                        showDivider = false
+                        showDivider = false,
+                        onClick = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Fitur ini akan segera hadir")
+                            }
+                        }
                     )
                 }
             }
@@ -365,17 +406,31 @@ fun PengaturanScreen(
             // ─── Bantuan Section ───────────────────────────────────────
             SettingsSection(
                 title = "Bantuan",
-                subtitle = "Butuh bantuan? Hubungi kami."
+                subtitle = "Pelajari cara pakai atau hubungi pengembang."
             ) {
                 SettingsCard {
                     SettingsItem(
                         icon = Icons.Default.Help,
                         label = "Pusat Bantuan",
                         value = "",
-                        showDivider = false
+                        showDivider = false,
+                        onClick = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Fitur ini akan segera hadir")
+                            }
+                        }
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "AaaaKetahuan v1.0.0",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         // Snackbar
@@ -406,7 +461,7 @@ fun PengaturanScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Contoh: dari URL docs.google.com/spreadsheets/d/**13aeG7h...**/edit",
+                        text = "Cari ID pada URL: sheets.google.com/spreadsheets/d/**ID_ADA_DISINI**/edit",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -417,7 +472,7 @@ fun PengaturanScreen(
                         value = inputId,
                         onValueChange = { inputId = it },
                         label = { Text("Spreadsheet ID") },
-                        placeholder = { Text("13aeG7h75xREgcmgs1QUOj6gXfjkvvFVmtlfyny9r3sk") },
+                        placeholder = { Text("13aeG7h75xREgc...") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp)
@@ -539,11 +594,13 @@ private fun SettingsItem(
     icon: ImageVector,
     label: String,
     value: String,
-    showDivider: Boolean = true
+    showDivider: Boolean = true,
+    onClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -593,9 +650,9 @@ private fun ThemeButton(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer
             else MaterialTheme.colorScheme.surfaceContainerLow,
-            contentColor = if (selected) MaterialTheme.colorScheme.onSurface
+            contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
             else MaterialTheme.colorScheme.secondary
         )
     ) {

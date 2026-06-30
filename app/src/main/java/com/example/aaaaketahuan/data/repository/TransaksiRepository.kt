@@ -229,8 +229,20 @@ class TransaksiRepository @Inject constructor(
         return sheetsHelper.testConnection()
     }
 
+    // ─── Theme Config ──────────────────────────────────────────────
+
+    fun getThemeMode(): String {
+        return prefs.getString(KEY_THEME_MODE, "system") ?: "system"
+    }
+
+    @SuppressLint("CommitPrefEdits")
+    fun setThemeMode(mode: String) {
+        prefs.edit().putString(KEY_THEME_MODE, mode).apply()
+    }
+
     companion object {
         private const val KEY_SPREADSHEET_ID = "spreadsheet_id"
         private const val KEY_SHEET_NAME = "sheet_name"
+        private const val KEY_THEME_MODE = "theme_mode"
     }
 }
