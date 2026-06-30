@@ -49,6 +49,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.aaaaketahuan.data.model.MetodeBayarEnum
 import com.example.aaaaketahuan.data.model.SumberPemasukanEnum
+import com.example.aaaaketahuan.util.formatNominal
+import com.example.aaaaketahuan.util.stripFormatNominal
 import com.example.aaaaketahuan.viewmodel.TransaksiViewModel
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -131,9 +133,9 @@ fun PemasukanScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 OutlinedTextField(
-                    value = nominal,
+                    value = nominal.formatNominal(),
                     onValueChange = { newValue ->
-                        nominal = newValue.filter { it.isDigit() }
+                        nominal = newValue.stripFormatNominal()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("0", style = MaterialTheme.typography.headlineLarge) },

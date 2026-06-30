@@ -64,6 +64,8 @@ import com.example.aaaaketahuan.data.model.MetodeBayarEnum
 import com.example.aaaaketahuan.ui.components.AutocompleteTextField
 import com.example.aaaaketahuan.ui.components.getKategoriIcon
 import com.example.aaaaketahuan.ui.theme.ExpenseRed
+import com.example.aaaaketahuan.util.formatNominal
+import com.example.aaaaketahuan.util.stripFormatNominal
 import com.example.aaaaketahuan.viewmodel.TransaksiViewModel
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -254,9 +256,9 @@ fun InputTransaksiScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 OutlinedTextField(
-                    value = nominal,
+                    value = nominal.formatNominal(),
                     onValueChange = { newValue ->
-                        nominal = newValue.filter { it.isDigit() }
+                        nominal = newValue.stripFormatNominal()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     prefix = {

@@ -10,6 +10,18 @@ fun Double.toRupiah(): String {
     return format.format(this).replace("Rp", "Rp ")
 }
 
+fun String.formatNominal(): String {
+    if (this.isEmpty() || this == "0") return this
+    val digitsOnly = this.filter { it.isDigit() }
+    if (digitsOnly.isEmpty()) return ""
+    val number = digitsOnly.toLongOrNull() ?: return this
+    return NumberFormat.getNumberInstance(Locale("id", "ID")).format(number)
+}
+
+fun String.stripFormatNominal(): String {
+    return this.filter { it.isDigit() }
+}
+
 fun String.toDisplayDate(): String {
     return try {
         val date = LocalDate.parse(this, DateTimeFormatter.ISO_LOCAL_DATE)
