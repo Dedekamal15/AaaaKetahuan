@@ -1,6 +1,7 @@
 package com.example.aaaaketahuan.ui.pemasukan
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,6 +42,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -58,7 +60,8 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PemasukanScreen(
-    viewModel: TransaksiViewModel
+    viewModel: TransaksiViewModel,
+    onBack: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -85,9 +88,9 @@ fun PemasukanScreen(
     ) {
         // Header
         Row(
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { /* navigate back */ }) {
+            IconButton(onClick = onBack) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
             }
             Text(
@@ -119,7 +122,7 @@ fun PemasukanScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                verticalAlignment = androidx.compose.ui.Alignment.Bottom
+                verticalAlignment = Alignment.Bottom
             ) {
                 Text(
                     text = "Rp",
@@ -144,8 +147,8 @@ fun PemasukanScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Catatan (Opsional)
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            androidx.compose.foundation.layout.Box(
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
                 modifier = Modifier
                     .width(4.dp)
                     .height(12.dp)
@@ -175,7 +178,7 @@ fun PemasukanScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Tanggal
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "TANGGAL",
@@ -199,7 +202,7 @@ fun PemasukanScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(12.dp),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     Icons.Default.CalendarToday,
@@ -224,7 +227,7 @@ fun PemasukanScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Sumber
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "SUMBER",
@@ -255,7 +258,7 @@ fun PemasukanScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Metode
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "METODE",

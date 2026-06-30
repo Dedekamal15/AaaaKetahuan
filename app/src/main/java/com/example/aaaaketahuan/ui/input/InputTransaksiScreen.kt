@@ -94,32 +94,35 @@ fun InputTransaksiScreen(
         initialSelectedDateMillis = System.currentTimeMillis()
     )
 
-    // Load existing transaksi if editing
+    // Load existing transaksi if editing — search across ALL data, not just current filter
     LaunchedEffect(editTransaksiId) {
         if (!editTransaksiId.isNullOrBlank()) {
-            val list = viewModel.transaksiList.value
-            val transaksi = list.find { it.id == editTransaksiId }
-            if (transaksi != null) {
-                jenis = transaksi.jenis
-                nominal = transaksi.jumlah.toLong().toString()
-                namaBarang = transaksi.namaBarang
-                keterangan = transaksi.keterangan
-                selectedKategori = KategoriEnum.entries.find { it.label == transaksi.kategori }
-                    ?: KategoriEnum.MAKANAN
-                tanggal = transaksi.tanggal
+            viewModel.getTransaksiById(editTransaksiId) { transaksi ->
+                if (transaksi != null) {
+                    jenis = transaksi.jenis
+                    nominal = transaksi.jumlah.toLong().toString()
+                    namaBarang = transaksi.namaBarang
+                    keterangan = transaksi.keterangan
+                    selectedKategori = KategoriEnum.entries.find { it.label == transaksi.kategori }
+                        ?: KategoriEnum.MAKANAN
+                    selectedMetodeBayar = MetodeBayarEnum.entries.find { it.label == transaksi.metodeBayar }
+                        ?: MetodeBayarEnum.CASH
+                    tanggal = transaksi.tanggal
+                }
             }
         }
     }
 
     val scrollState = rememberScrollState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(16.dp)
-            .padding(bottom = 80.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(16.dp)
+                .padding(bottom = 80.dp)
+        ) {
         // Header
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -543,8 +546,14 @@ fun InputTransaksiScreen(
         }
     }
 
-    // Snackbar Host
-    SnackbarHost(hostState = snackbarHostState)
+        } // End Column
+
+        // Snackbar Host positioned as overlay
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+    } // End Box
 }
 
 fun getMetodeIcon(metode: String): ImageVector {

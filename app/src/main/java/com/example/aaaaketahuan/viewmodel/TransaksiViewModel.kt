@@ -66,6 +66,20 @@ class TransaksiViewModel @Inject constructor(
     init {
         loadTransaksi()
         syncPending()
+        setupAutocompleteSearch()
+    }
+
+    /**
+     * Sets up autocomplete search with debounce once in init,
+     * avoiding flow leaks from repeated launch calls.
+     */
+    private fun setupAutocompleteSearch() {
+        viewModelScope.launch {
+            _namaBarangInput
+                .debounce(150)
+                .map { query -> repository.getSaran(query) }
+                .collect { saran -> _saranNamaBarang.value = saran }
+        }
     }
 
     fun loadTransaksi() {
@@ -86,12 +100,6 @@ class TransaksiViewModel @Inject constructor(
 
     fun onNamaBarangChange(input: String) {
         _namaBarangInput.value = input
-        viewModelScope.launch {
-            _namaBarangInput
-                .debounce(150)
-                .map { query -> repository.getSaran(query) }
-                .collect { saran -> _saranNamaBarang.value = saran }
-        }
     }
 
     fun clearSaran() {
@@ -184,6 +192,17 @@ class TransaksiViewModel @Inject constructor(
 
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    /**
+     * Finds a transaction across ALL data (not just current month filter)
+     * for editing purposes.
+     */
+    fun getTransaksiById(id: String, onResult: (Transaksi?) -> Unit) {
+        viewModelScope.launch {
+            val all = repository.getAllTransaksi()
+            onResult(all.find { it.id == id })
+        }
     }
 
     fun getTransaksiByKategoriForMonth(bulan: Int, tahun: Int): Map<String, Double> {

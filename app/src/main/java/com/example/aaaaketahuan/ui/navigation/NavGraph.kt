@@ -1,10 +1,12 @@
 package com.example.aaaaketahuan.ui.navigation
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.History
@@ -48,7 +50,7 @@ data class BottomNavItem(
 val bottomNavItems = listOf(
     BottomNavItem(NavRoute.DASHBOARD, "Dashboard", Icons.Filled.AccountBalanceWallet, Icons.Filled.AccountBalanceWallet),
     BottomNavItem(NavRoute.INPUT, "Input", Icons.Filled.AddCircle, Icons.Outlined.AddCircle),
-    BottomNavItem(NavRoute.PEMASUKAN, "Pemasukan", Icons.Filled.AccountBalanceWallet, Icons.Filled.AccountBalanceWallet),
+    BottomNavItem(NavRoute.PEMASUKAN, "Pemasukan", Icons.Filled.TrendingUp, Icons.Filled.TrendingUp),
     BottomNavItem(NavRoute.RIWAYAT, "Riwayat", Icons.Filled.History, Icons.Outlined.History),
     BottomNavItem(NavRoute.GRAFIK, "Grafik", Icons.Filled.Analytics, Icons.Outlined.Analytics)
 )
@@ -152,7 +154,10 @@ fun AppNavGraph(
             }
 
             composable(NavRoute.PEMASUKAN) {
-                PemasukanScreen(viewModel = viewModel)
+                PemasukanScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
 
             composable(NavRoute.RIWAYAT) {
