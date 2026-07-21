@@ -18,7 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Button
@@ -47,8 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.example.aaaaketahuan.viewmodel.TransaksiViewModel
 import kotlinx.coroutines.launch
-import java.time.format.TextStyle
-import java.util.Locale
 
 @Composable
 fun ExportImportScreen(
@@ -62,12 +60,7 @@ fun ExportImportScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    val bulanNames = (1..12).map {
-        java.time.Month.of(it).getDisplayName(TextStyle.FULL, Locale("id", "ID"))
-    }
-
     var exportMode by remember { mutableStateOf("all") } // "all" or "month"
-    var selectedMonth by remember { mutableStateOf("${bulanNames[filterBulan - 1]} $filterTahun") }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -95,7 +88,7 @@ fun ExportImportScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
             }
             Icon(
                 imageVector = Icons.Default.AccountBalanceWallet,
@@ -272,11 +265,17 @@ fun ExportImportScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Pilih file .csv dari penyimpanan Anda.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedButton(
-                    onClick = { importLauncher.launch("text/csv") },
+                    onClick = { importLauncher.launch("*/*") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {

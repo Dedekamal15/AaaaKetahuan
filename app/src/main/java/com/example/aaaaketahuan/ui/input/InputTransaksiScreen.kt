@@ -1,6 +1,6 @@
 package com.example.aaaaketahuan.ui.input
 
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -55,15 +54,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.aaaaketahuan.R
 import com.example.aaaaketahuan.data.model.KategoriEnum
 import com.example.aaaaketahuan.data.model.MetodeBayarEnum
 import com.example.aaaaketahuan.ui.components.AutocompleteTextField
 import com.example.aaaaketahuan.ui.components.getKategoriIcon
 import com.example.aaaaketahuan.ui.theme.ExpenseRed
+import com.example.aaaaketahuan.ui.theme.IncomeGreen
 import com.example.aaaaketahuan.util.formatNominal
 import com.example.aaaaketahuan.util.stripFormatNominal
 import com.example.aaaaketahuan.viewmodel.TransaksiViewModel
@@ -87,8 +89,15 @@ fun InputTransaksiScreen(
     var nominal by remember { mutableStateOf("") }
     var namaBarang by remember { mutableStateOf("") }
     var keterangan by remember { mutableStateOf("") }
-    var selectedKategori by remember { mutableStateOf(KategoriEnum.MAKANAN) }
-    var selectedMetodeBayar by remember { mutableStateOf(MetodeBayarEnum.CASH) }
+    // Determine a safe default kategori (first visible one, fallback "Makanan")
+    val defaultKategoriLabel = remember {
+        val hidden = viewModel.getHiddenKategori().toSet()
+        KategoriEnum.entries.firstOrNull { it.label !in hidden }?.label
+            ?: viewModel.getCustomKategori().firstOrNull()
+            ?: KategoriEnum.MAKANAN.label
+    }
+    var selectedKategori by remember { mutableStateOf(defaultKategoriLabel) }
+    var selectedMetodeBayar by remember { mutableStateOf("Cash") }
     var tanggal by remember { mutableStateOf(LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)) }
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -105,10 +114,8 @@ fun InputTransaksiScreen(
                     nominal = transaksi.jumlah.toLong().toString()
                     namaBarang = transaksi.namaBarang
                     keterangan = transaksi.keterangan
-                    selectedKategori = KategoriEnum.entries.find { it.label == transaksi.kategori }
-                        ?: KategoriEnum.MAKANAN
-                    selectedMetodeBayar = MetodeBayarEnum.entries.find { it.label == transaksi.metodeBayar }
-                        ?: MetodeBayarEnum.CASH
+                    selectedKategori = transaksi.kategori
+                    selectedMetodeBayar = transaksi.metodeBayar.ifBlank { "Cash" }
                     tanggal = transaksi.tanggal
                 }
             }
@@ -127,10 +134,10 @@ fun InputTransaksiScreen(
         ) {
         // Header
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.AccountBalanceWallet,
+            Image(
+                painter = painterResource(R.drawable.ic_logo),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.size(8.dp))
             Text(
@@ -150,89 +157,43 @@ fun InputTransaksiScreen(
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
-            text = "Catat pengeluaran atau pemasukan harian Anda.",
+            text = "Catat pengeluaran harian Anda.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.secondary
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Transaction Type Toggle
+        // Transaction Type Indicator (dynamic: shows "Pemasukan" or "Pengeluaran")
+        val isExpense = jenis == "keluar"
+        val typeColor = if (isExpense) ExpenseRed else IncomeGreen
+        val typeIcon = if (isExpense) Icons.Default.ArrowCircleUp else Icons.Default.ArrowCircleDown
+        val typeLabel = if (isExpense) "Pengeluaran" else "Pemasukan"
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                containerColor = typeColor.copy(alpha = 0.12f)
             )
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(6.dp)
-                    .height(44.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize()
-                        .clip(CircleShape)
-                        .then(
-                            if (jenis == "masuk") Modifier.background(
-                                MaterialTheme.colorScheme.surfaceContainerLowest,
-                                CircleShape
-                            ) else Modifier
-                        )
-                        .clickable { jenis = "masuk" },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.ArrowCircleDown,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = if (jenis == "masuk") MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.size(4.dp))
-                        Text(
-                            text = "Masuk",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (jenis == "masuk") MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxSize()
-                        .clip(CircleShape)
-                        .then(
-                            if (jenis == "keluar") Modifier.background(
-                                MaterialTheme.colorScheme.surfaceContainerLowest,
-                                CircleShape
-                            ) else Modifier
-                        )
-                        .clickable { jenis = "keluar" },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.ArrowCircleUp,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = if (jenis == "keluar") ExpenseRed
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.size(4.dp))
-                        Text(
-                            text = "Keluar",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (jenis == "keluar") ExpenseRed
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                Icon(
+                    typeIcon,
+                    contentDescription = null,
+                    tint = typeColor
+                )
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(
+                    text = typeLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = typeColor
+                )
             }
         }
 
@@ -300,48 +261,53 @@ fun InputTransaksiScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Column {
-                    val chunked = KategoriEnum.entries.chunked(4)
+                    // Compute kategori list once — changes rarely (only when hidden/custom changes)
+                    val allVisibleLabels = remember {
+                        val hiddenSet = viewModel.getHiddenKategori().toSet()
+                        val visibleEnumLabels = KategoriEnum.entries
+                            .filter { it.label !in hiddenSet }
+                            .map { it.label }
+                        val customLabels = viewModel.getCustomKategori()
+                        (visibleEnumLabels + customLabels)
+                            .ifEmpty { KategoriEnum.entries.map { it.label } }
+                    }
+                    val chunked = allVisibleLabels.chunked(4)
                     chunked.forEach { rowItems ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            rowItems.forEach { kategori ->
-                                val isSelected = selectedKategori == kategori
-                                val bgColor by animateColorAsState(
-                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                            rowItems.forEach { label ->
+                                val isSelected = selectedKategori == label
+                                // Static colors per item — no animation overhead
+                                val chipBg = if (isSelected) MaterialTheme.colorScheme.primaryContainer
                                     else MaterialTheme.colorScheme.surfaceContainerLow
-                                )
-                                val textColor by animateColorAsState(
-                                    if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                                val chipContent = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
                                     else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                val borderColor by animateColorAsState(
-                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                val chipBorder = if (isSelected) MaterialTheme.colorScheme.primaryContainer
                                     else MaterialTheme.colorScheme.outlineVariant
-                                )
 
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(bgColor)
-                                        .border(1.dp, borderColor, RoundedCornerShape(12.dp))
-                                        .clickable { selectedKategori = kategori }
+                                        .background(chipBg)
+                                        .border(1.dp, chipBorder, RoundedCornerShape(12.dp))
+                                        .clickable { selectedKategori = label }
                                         .padding(vertical = 12.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Icon(
-                                            imageVector = getKategoriIcon(kategori.label),
+                                            imageVector = getKategoriIcon(label),
                                             contentDescription = null,
-                                            tint = textColor
+                                            tint = chipContent
                                         )
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text = kategori.label,
+                                            text = label,
                                             style = MaterialTheme.typography.labelMedium,
-                                            color = textColor
+                                            color = chipContent
                                         )
                                     }
                                 }
@@ -365,48 +331,43 @@ fun InputTransaksiScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Column {
-                    val metodeChunked = MetodeBayarEnum.entries.chunked(3)
-                    metodeChunked.forEach { rowItems ->
+                    val effectiveMetode = remember { viewModel.getEffectiveMetodeBayar() }
+                    effectiveMetode.chunked(3).forEach { rowItems ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             rowItems.forEach { metode ->
                                 val isSelected = selectedMetodeBayar == metode
-                                val bgColor by animateColorAsState(
-                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                // Static colors — no animation allocation per item
+                                val chipBg = if (isSelected) MaterialTheme.colorScheme.primaryContainer
                                     else MaterialTheme.colorScheme.surfaceContainerLow
-                                )
-                                val textColor by animateColorAsState(
-                                    if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                                val chipContent = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
                                     else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                val borderColor by animateColorAsState(
-                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                val chipBorder = if (isSelected) MaterialTheme.colorScheme.primaryContainer
                                     else MaterialTheme.colorScheme.outlineVariant
-                                )
 
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(bgColor)
-                                        .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+                                        .background(chipBg)
+                                        .border(1.dp, chipBorder, RoundedCornerShape(12.dp))
                                         .clickable { selectedMetodeBayar = metode }
                                         .padding(vertical = 12.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Icon(
-                                            imageVector = getMetodeIcon(metode.label),
+                                            imageVector = getMetodeIcon(metode),
                                             contentDescription = null,
-                                            tint = textColor
+                                            tint = chipContent
                                         )
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text = metode.label,
+                                            text = metode,
                                             style = MaterialTheme.typography.labelMedium,
-                                            color = textColor
+                                            color = chipContent
                                         )
                                     }
                                 }
@@ -429,10 +390,13 @@ fun InputTransaksiScreen(
                     color = MaterialTheme.colorScheme.secondary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                OutlinedTextField(
-                    value = LocalDate.parse(tanggal).format(
+                val formattedDate = remember(tanggal) {
+                    LocalDate.parse(tanggal).format(
                         DateTimeFormatter.ofPattern("dd MMMM yyyy", java.util.Locale("id", "ID"))
-                    ),
+                    )
+                }
+                OutlinedTextField(
+                    value = formattedDate,
                     onValueChange = {},
                     modifier = Modifier.fillMaxWidth(),
                     readOnly = true,
@@ -476,9 +440,9 @@ fun InputTransaksiScreen(
                                 jumlah = jumlah,
                                 namaBarang = namaBarang,
                                 keterangan = keterangan,
-                                kategori = selectedKategori.label,
+                                kategori = selectedKategori,
                                 tanggal = tanggal,
-                                metodeBayar = selectedMetodeBayar.label
+                                metodeBayar = selectedMetodeBayar
                             )
                             // Reset form
                             nominal = ""
@@ -547,8 +511,6 @@ fun InputTransaksiScreen(
             DatePicker(state = datePickerState)
         }
     }
-
-        } // End Column
 
         // Snackbar Host positioned as overlay
         SnackbarHost(

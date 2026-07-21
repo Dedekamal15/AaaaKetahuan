@@ -89,7 +89,7 @@ fun AaaaKetahuanTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.surface.toArgb()
-            ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets -> insets }
+            ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { _, insets -> insets }
         }
     }
 

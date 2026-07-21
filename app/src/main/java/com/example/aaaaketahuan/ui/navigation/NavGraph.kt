@@ -1,12 +1,13 @@
 package com.example.aaaaketahuan.ui.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.History
@@ -22,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -31,6 +33,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.aaaaketahuan.forecast.ForecastViewModel
+import com.example.aaaaketahuan.forecast.ui.ForecastScreen
 import com.example.aaaaketahuan.ui.dashboard.DashboardScreen
 import com.example.aaaaketahuan.ui.export.ExportImportScreen
 import com.example.aaaaketahuan.ui.grafik.GrafikScreen
@@ -50,7 +54,7 @@ data class BottomNavItem(
 val bottomNavItems = listOf(
     BottomNavItem(NavRoute.DASHBOARD, "Dashboard", Icons.Filled.AccountBalanceWallet, Icons.Filled.AccountBalanceWallet),
     BottomNavItem(NavRoute.INPUT, "Input", Icons.Filled.AddCircle, Icons.Outlined.AddCircle),
-    BottomNavItem(NavRoute.PEMASUKAN, "Pemasukan", Icons.Filled.TrendingUp, Icons.Filled.TrendingUp),
+    BottomNavItem(NavRoute.PEMASUKAN, "Pemasukan", Icons.AutoMirrored.Filled.TrendingUp, Icons.AutoMirrored.Filled.TrendingUp),
     BottomNavItem(NavRoute.RIWAYAT, "Riwayat", Icons.Filled.History, Icons.Outlined.History),
     BottomNavItem(NavRoute.GRAFIK, "Grafik", Icons.Filled.Analytics, Icons.Outlined.Analytics)
 )
@@ -70,8 +74,8 @@ fun AppNavGraph(
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.95f),
-                    tonalElevation = 0.dp
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = 2.dp
                 ) {
                     bottomNavItems.forEach { item ->
                         val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
@@ -86,6 +90,7 @@ fun AppNavGraph(
                                     restoreState = true
                                 }
                             },
+                            alwaysShowLabel = true,
                             icon = {
                                 Icon(
                                     imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
@@ -95,7 +100,7 @@ fun AppNavGraph(
                             label = {
                                 Text(
                                     text = item.label,
-                                    style = MaterialTheme.typography.labelMedium
+                                    style = MaterialTheme.typography.labelSmall
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
@@ -114,7 +119,9 @@ fun AppNavGraph(
         NavHost(
             navController = navController,
             startDestination = NavRoute.DASHBOARD,
-            modifier = Modifier.padding(paddingValues)
+            modifier = Modifier
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.surface)
         ) {
             composable(NavRoute.DASHBOARD) {
                 DashboardScreen(
@@ -145,7 +152,20 @@ fun AppNavGraph(
                     },
                     onNavigateToPengaturan = {
                         navController.navigate(NavRoute.PENGATURAN)
+                    },
+                    onNavigateToForecast = {
+                        navController.navigate(NavRoute.FORECAST) {
+                            launchSingleTop = true
+                        }
                     }
+                )
+            }
+
+            composable(NavRoute.FORECAST) {
+                val forecastViewModel: ForecastViewModel = hiltViewModel()
+                ForecastScreen(
+                    viewModel = forecastViewModel,
+                    onBack = { navController.popBackStack() }
                 )
             }
 
@@ -170,7 +190,16 @@ fun AppNavGraph(
             }
 
             composable(NavRoute.GRAFIK) {
-                GrafikScreen(viewModel = viewModel)
+                GrafikScreen(
+                    viewModel = viewModel,
+                    onNavigateToRiwayat = {
+                        navController.navigate(NavRoute.RIWAYAT) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
             }
 
             composable(NavRoute.PENGATURAN) {

@@ -3,6 +3,9 @@ package com.example.aaaaketahuan.viewmodel
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.aaaaketahuan.data.model.KategoriEnum
+import com.example.aaaaketahuan.data.model.MetodeBayarEnum
+import com.example.aaaaketahuan.data.model.SumberPemasukanEnum
 import com.example.aaaaketahuan.data.model.Transaksi
 import com.example.aaaaketahuan.data.repository.TransaksiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,6 +16,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalDate
@@ -51,6 +58,19 @@ class TransaksiViewModel @Inject constructor(
     private val _themeMode = MutableStateFlow("system")
     val themeMode: StateFlow<String> = _themeMode.asStateFlow()
 
+    private val _pendingAuthIntent = MutableStateFlow<android.content.Intent?>(null)
+    val pendingAuthIntent: StateFlow<android.content.Intent?> = _pendingAuthIntent.asStateFlow()
+
+    private val _userEmail = MutableStateFlow<String?>(null)
+    val userEmail: StateFlow<String?> = _userEmail.asStateFlow()
+
+    private val _userDisplayName = MutableStateFlow<String?>(null)
+    val userDisplayName: StateFlow<String?> = _userDisplayName.asStateFlow()
+
+    fun clearPendingAuthIntent() {
+        _pendingAuthIntent.value = null
+    }
+
     val totalMasuk: StateFlow<Double> = _transaksiList
         .map { list -> list.filter { it.jenis == "masuk" }.sumOf { it.jumlah } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
@@ -68,6 +88,8 @@ class TransaksiViewModel @Inject constructor(
 
     init {
         _themeMode.value = repository.getThemeMode()
+        _userEmail.value = repository.getConnectedAccount()
+        _userDisplayName.value = repository.getUserDisplayName()
         loadTransaksi()
         syncPending()
         setupAutocompleteSearch()
@@ -77,10 +99,12 @@ class TransaksiViewModel @Inject constructor(
      * Sets up autocomplete search with debounce once in init,
      * avoiding flow leaks from repeated launch calls.
      */
+    @OptIn(FlowPreview::class)
     private fun setupAutocompleteSearch() {
         viewModelScope.launch {
             _namaBarangInput
                 .debounce(150)
+                .flowOn(Dispatchers.IO)
                 .map { query -> repository.getSaran(query) }
                 .collect { saran -> _saranNamaBarang.value = saran }
         }
@@ -90,11 +114,11 @@ class TransaksiViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val allTransaksi = repository.getAllTransaksi()
-                _transaksiList.value = allTransaksi.filter {
-                    it.bulan == _filterBulan.value && it.tahun == _filterTahun.value
-                }
+                _transaksiList.value = repository.getTransaksiByBulan(
+                    _filterBulan.value, _filterTahun.value
+                )
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _errorMessage.value = "Gagal memuat data: ${e.message}"
             } finally {
                 _isLoading.value = false
@@ -138,6 +162,7 @@ class TransaksiViewModel @Inject constructor(
                 repository.simpanTransaksi(transaksi)
                 loadTransaksi()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _errorMessage.value = "Gagal menyimpan transaksi: ${e.message}"
             }
         }
@@ -149,6 +174,7 @@ class TransaksiViewModel @Inject constructor(
                 repository.editTransaksi(transaksi)
                 loadTransaksi()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _errorMessage.value = "Gagal mengedit transaksi: ${e.message}"
             }
         }
@@ -160,6 +186,7 @@ class TransaksiViewModel @Inject constructor(
                 repository.hapusTransaksi(id)
                 loadTransaksi()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _errorMessage.value = "Gagal menghapus transaksi: ${e.message}"
             }
         }
@@ -177,6 +204,7 @@ class TransaksiViewModel @Inject constructor(
                 val file = repository.exportCsv(bulan, tahun)
                 onSuccess(file)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _errorMessage.value = "Gagal export CSV: ${e.message}"
             }
         }
@@ -189,6 +217,7 @@ class TransaksiViewModel @Inject constructor(
                 loadTransaksi()
                 onSuccess(count)
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _errorMessage.value = "Gagal import CSV: ${e.message}"
             }
         }
@@ -201,6 +230,28 @@ class TransaksiViewModel @Inject constructor(
 
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    // ─── Daily Reminder ───────────────────────────────────────────────
+
+    fun isReminderEnabled(): Boolean = repository.isReminderEnabled()
+
+    fun getReminderHour(): Int = repository.getReminderHour()
+
+    fun getReminderMinute(): Int = repository.getReminderMinute()
+
+    fun getReminderTimeFormatted(): String = repository.getReminderTimeFormatted()
+
+    fun enableReminder(hour: Int, minute: Int) {
+        repository.enableReminder(hour, minute)
+    }
+
+    fun disableReminder() {
+        repository.disableReminder()
+    }
+
+    fun updateReminderTime(hour: Int, minute: Int) {
+        repository.updateReminderTime(hour, minute)
     }
 
     /**
@@ -221,22 +272,99 @@ class TransaksiViewModel @Inject constructor(
             .mapValues { (_, list) -> list.sumOf { it.jumlah } }
     }
 
-    // ─── Spreadsheet Config ──────────────────────────────────────────
+    // ─── Spreadsheet Config (OAuth 2.0) ────────────────────────────
 
     fun getSpreadsheetConfig(): Pair<String, String> {
         return Pair(repository.getSpreadsheetId(), repository.getSheetName())
+    }
+
+    fun getConnectedAccount(): String? {
+        return repository.getConnectedAccount()
     }
 
     fun isSpreadsheetConnected(): Boolean {
         return repository.isSpreadsheetConnected()
     }
 
-    fun connectSpreadsheet(spreadsheetId: String, sheetName: String = "Sheet1") {
-        repository.connectSpreadsheet(spreadsheetId, sheetName)
+    /**
+     * Called after user successfully logs in via GoogleSignIn.
+     * Sets the OAuth credential and saves the account email.
+     */
+    fun connectGoogleAccount(accountEmail: String) {
+        repository.connectGoogleAccount(accountEmail)
+        _userEmail.value = accountEmail
+    }
+
+    /**
+     * Checks if the given email already has a spreadsheet saved from a previous login.
+     * If found, restores the config so the app reuses the same spreadsheet
+     * instead of creating a new one.
+     * @return true if an existing spreadsheet was restored, false otherwise.
+     */
+    fun restoreExistingSpreadsheet(email: String): Boolean {
+        return repository.restoreSpreadsheetForEmail(email)
+    }
+
+    /**
+     * Creates a new spreadsheet in the user's Google Drive.
+     * Must be called AFTER [connectGoogleAccount].
+     */
+    fun createNewSpreadsheet(onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val result = repository.createNewSpreadsheet()
+                result.fold(
+                    onSuccess = { spreadsheetId ->
+                        repository.saveSpreadsheetConfig(spreadsheetId)
+                        onSuccess(spreadsheetId)
+                    },
+                    onFailure = { error ->
+                        if (error.message == "PERLU_IZIN") {
+                            val intent = repository.consumePendingAuthIntent()
+                            if (intent != null) {
+                                _pendingAuthIntent.value = intent
+                            } else {
+                                onError("Perlu izin akses Google Sheets")
+                            }
+                        } else {
+                            onError(error.message ?: "Gagal membuat spreadsheet")
+                        }
+                    }
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                onError(e.message ?: "Gagal membuat spreadsheet")
+            }
+        }
     }
 
     fun disconnectSpreadsheet() {
         repository.disconnectSpreadsheet()
+    }
+
+    /**
+     * Logout: clears all credentials and spreadsheet config,
+     * then sets [userEmail] to null so MainActivity renders AuthScreen.
+     */
+    fun logout() {
+        repository.logout()
+        _userEmail.value = null
+        _userDisplayName.value = null
+    }
+
+    /**
+     * Saves onboarding data: user display name, hidden categories, and custom categories.
+     * Called when user completes the onboarding screen.
+     */
+    fun saveOnboardingData(
+        name: String,
+        hiddenCategories: List<String>,
+        customCategories: List<String>
+    ) {
+        repository.saveUserDisplayName(name)
+        repository.saveHiddenKategori(hiddenCategories)
+        repository.saveCustomKategori(customCategories)
+        _userDisplayName.value = name
     }
 
     fun testSpreadsheetConnection(onResult: (Boolean, String?) -> Unit) {
@@ -249,6 +377,7 @@ class TransaksiViewModel @Inject constructor(
                     onResult(false, result.exceptionOrNull()?.message ?: "Gagal terhubung")
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 onResult(false, e.message ?: "Gagal terhubung")
             }
         }
@@ -256,17 +385,23 @@ class TransaksiViewModel @Inject constructor(
 
     /**
      * Retry syncing all unsynced transactions to Google Sheets.
+     * Skips network call early if no pending transactions exist.
      */
     fun syncPending() {
         viewModelScope.launch {
             _isSyncing.value = true
             try {
+                // Early exit: check if anything pending without full file read
+                val pending = repository.getPendingSyncCount()
+                if (pending == 0) return@launch
+
                 val count = repository.syncPendingTransactions()
                 if (count > 0) {
                     loadTransaksi()
                 }
                 updatePendingCount()
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 _errorMessage.value = "Gagal sinkronisasi: ${e.message}"
             } finally {
                 _isSyncing.value = false
@@ -277,5 +412,162 @@ class TransaksiViewModel @Inject constructor(
     private suspend fun updatePendingCount() {
         val all = repository.getAllTransaksi()
         _pendingSyncCount.value = all.count { !it.isSynced }
+    }
+
+    // ─── Category Management ─────────────────────────────────
+
+    /** Returns merged list: enum entries + custom entries, minus hidden ones */
+    fun getEffectiveKategori(): List<String> {
+        val hidden = repository.getHiddenKategori().toSet()
+        val fromEnum = KategoriEnum.entries.map { it.label }.filter { it !in hidden }
+        val custom = repository.getCustomKategori()
+        return fromEnum + custom
+    }
+
+    fun getCustomKategori(): List<String> = repository.getCustomKategori()
+    fun saveCustomKategori(list: List<String>) = repository.saveCustomKategori(list)
+    fun getHiddenKategori(): List<String> = repository.getHiddenKategori()
+    fun saveHiddenKategori(list: List<String>) = repository.saveHiddenKategori(list)
+
+    fun getEffectiveMetodeBayar(): List<String> {
+        val fromEnum = MetodeBayarEnum.entries.map { it.label }
+        return fromEnum + repository.getCustomMetodeBayar()
+    }
+
+    fun getCustomMetodeBayar(): List<String> = repository.getCustomMetodeBayar()
+    fun saveCustomMetodeBayar(list: List<String>) = repository.saveCustomMetodeBayar(list)
+
+    fun getEffectiveSumberPemasukan(): List<String> {
+        val fromEnum = SumberPemasukanEnum.entries.map { it.label }
+        return fromEnum + repository.getCustomSumberPemasukan()
+    }
+
+    fun getCustomSumberPemasukan(): List<String> = repository.getCustomSumberPemasukan()
+    fun saveCustomSumberPemasukan(list: List<String>) = repository.saveCustomSumberPemasukan(list)
+
+    // ─── Period Management ─────────────────────────────────────────────
+
+    /** Returns the last recorded period month/year. Defaults to current month. */
+    fun getLastPeriodStart(): Pair<Int, Int> = repository.getLastPeriodStart()
+
+    /**
+     * Starts a new period for the given month/year:
+     * 1. Records the period in SharedPreferences
+     * 2. Resets the filter to the new period
+     * 3. Creates a new sheet tab in the spreadsheet
+     *
+     * Called from PemasukanScreen when user confirms "Mulai periode bulan baru?"
+     */
+    fun startNewPeriod(bulan: Int, tahun: Int, onSheetCreated: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            // 1. Record period
+            repository.setLastPeriodStart(bulan, tahun)
+
+            // 2. Reset filter to new period
+            _filterBulan.value = bulan
+            _filterTahun.value = tahun
+            loadTransaksi()
+
+            // 3. Create new sheet tab in spreadsheet (if connected)
+            val spreadsheetId = repository.getSpreadsheetId()
+            if (spreadsheetId.isNotBlank()) {
+                val result = repository.createNewPeriodSheet(bulan, tahun)
+                onSheetCreated(result.isSuccess)
+            } else {
+                onSheetCreated(false)
+            }
+        }
+    }
+
+    // ─── Restore from Google Sheets ─────────────────────────────────────
+
+    private val _showRestoreDialog = MutableStateFlow(false)
+    val showRestoreDialog: StateFlow<Boolean> = _showRestoreDialog.asStateFlow()
+
+    private val _restoreCount = MutableStateFlow(0)
+    val restoreCount: StateFlow<Int> = _restoreCount.asStateFlow()
+
+    private val _isRestoring = MutableStateFlow(false)
+    val isRestoring: StateFlow<Boolean> = _isRestoring.asStateFlow()
+
+    private val _restoreMessage = MutableStateFlow<String?>(null)
+    val restoreMessage: StateFlow<String?> = _restoreMessage.asStateFlow()
+
+    /**
+     * Called after spreadsheet is connected (either restored from email or newly created).
+     * If this is a fresh install (no local data) and a spreadsheet is connected,
+     * reads available data from the spreadsheet and offers to restore it.
+     */
+    fun checkAndOfferRestore() {
+        viewModelScope.launch {
+            if (repository.hasLocalData()) return@launch
+            val spreadsheetId = repository.getSpreadsheetId()
+            if (spreadsheetId.isBlank()) return@launch
+
+            // Count how many transactions are in the spreadsheet
+            val count = countSheetTransactions()
+            if (count > 0) {
+                _restoreCount.value = count
+                _showRestoreDialog.value = true
+            }
+        }
+    }
+
+    /**
+     * Counts total data rows across all sheet tabs (without loading everything into memory).
+     */
+    private suspend fun countSheetTransactions(): Int {
+        val tabsResult = repository.getAllSheetTabs()
+        if (tabsResult.isFailure) return 0
+        val tabs = tabsResult.getOrThrow()
+        var total = 0
+        for (tab in tabs) {
+            val rowsResult = repository.readAllRowsFromSheet(tab)
+            if (rowsResult.isSuccess) {
+                total += rowsResult.getOrThrow()
+            }
+        }
+        return total
+    }
+
+    /**
+     * User confirms restore — pulls all data from Google Sheets into local storage.
+     */
+    fun confirmRestore(onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isRestoring.value = true
+            _restoreMessage.value = null
+            try {
+                val result = repository.restoreAllFromSheet()
+                result.fold(
+                    onSuccess = { count ->
+                        _showRestoreDialog.value = false
+                        loadTransaksi()
+                        _restoreMessage.value = "Berhasil memulihkan $count transaksi dari spreadsheet!"
+                    },
+                    onFailure = { error ->
+                        _restoreMessage.value = "Gagal: ${error.message}"
+                    }
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _restoreMessage.value = "Gagal: ${e.message}"
+            } finally {
+                _isRestoring.value = false
+                onComplete()
+            }
+        }
+    }
+
+    /** User dismisses the restore dialog */
+    fun dismissRestore() {
+        _showRestoreDialog.value = false
+        _restoreCount.value = 0
+        _restoreMessage.value = null
+    }
+
+    /** Clear just the message (after snackbar has been shown) */
+    fun clearRestoreMessage() {
+        _restoreMessage.value = null
     }
 }

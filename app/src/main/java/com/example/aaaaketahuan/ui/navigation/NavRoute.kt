@@ -1,6 +1,7 @@
 package com.example.aaaaketahuan.ui.navigation
 
 object NavRoute {
+    const val AUTH = "auth"
     const val DASHBOARD = "dashboard"
     const val INPUT = "input"
     const val PEMASUKAN = "pemasukan"
@@ -8,6 +9,7 @@ object NavRoute {
     const val GRAFIK = "grafik"
     const val PENGATURAN = "pengaturan"
     const val EXPORT_IMPORT = "export_import"
+    const val FORECAST = "forecast"
     const val EDIT_TRANSAKSI = "edit_transaksi/{transaksiId}"
 
     fun editTransaksi(transaksiId: String): String = "edit_transaksi/$transaksiId"

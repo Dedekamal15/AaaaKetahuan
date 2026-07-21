@@ -39,6 +39,7 @@ val Outline = Color(0xFF707A6C)
 val OutlineVariant = Color(0xFFC4C7C5)
 
 val ExpenseRed = Color(0xFFD32F2F)
+val IncomeGreen = Color(0xFF2E7D32)
 
 val InverseSurface = Color(0xFF2E3132)
 val InverseOnSurface = Color(0xFFF0F1F2)

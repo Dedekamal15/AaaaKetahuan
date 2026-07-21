@@ -1,5 +1,6 @@
 package com.example.aaaaketahuan.ui.grafik
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,14 +34,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.aaaaketahuan.R
 import com.example.aaaaketahuan.ui.theme.ExpenseRed
 import com.example.aaaaketahuan.util.toRupiah
 import com.example.aaaaketahuan.viewmodel.TransaksiViewModel
@@ -52,10 +60,14 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 @Composable
-fun GrafikScreen(viewModel: TransaksiViewModel) {
+fun GrafikScreen(
+    viewModel: TransaksiViewModel,
+    onNavigateToRiwayat: () -> Unit = {}
+) {
     val transaksiList by viewModel.transaksiList.collectAsState()
     val filterBulan by viewModel.filterBulan.collectAsState()
     val filterTahun by viewModel.filterTahun.collectAsState()
+    var showMoreMenu by remember { mutableStateOf(false) }
 
     val bulanNames = (1..12).map {
         java.time.Month.of(it).getDisplayName(TextStyle.FULL, Locale("id", "ID"))
@@ -84,10 +96,9 @@ fun GrafikScreen(viewModel: TransaksiViewModel) {
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.AccountBalanceWallet,
+            Image(
+                painter = painterResource(R.drawable.ic_logo),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(28.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
@@ -98,7 +109,7 @@ fun GrafikScreen(viewModel: TransaksiViewModel) {
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = {}) {
+            IconButton(onClick = onNavigateToRiwayat) {
                 Icon(Icons.Default.Search, contentDescription = "Cari")
             }
         }
@@ -173,8 +184,22 @@ fun GrafikScreen(viewModel: TransaksiViewModel) {
                         text = "Pengeluaran per Kategori",
                         style = MaterialTheme.typography.titleLarge
                     )
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Default.MoreVert, contentDescription = null)
+                    Box {
+                        IconButton(onClick = { showMoreMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = null)
+                        }
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Lihat Riwayat") },
+                                onClick = {
+                                    showMoreMenu = false
+                                    onNavigateToRiwayat()
+                                }
+                            )
+                        }
                     }
                 }
 

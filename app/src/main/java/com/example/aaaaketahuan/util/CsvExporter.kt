@@ -11,7 +11,7 @@ object CsvExporter {
         val file = File(context.cacheDir, "export_transaksi.csv")
         FileWriter(file).use { writer ->
             // UTF-8 BOM for Windows Excel compatibility
-            writer.write('\uFEFF')
+            writer.write("\uFEFF")
             writer.write("id,tanggal,jenis,jumlah,namaBarang,keterangan,kategori,bulan,tahun,metodeBayar,sumber,isSynced\n")
             list.forEach { t ->
                 writer.write(

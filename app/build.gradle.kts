@@ -22,8 +22,18 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(System.getenv("RELEASE_KEYSTORE") ?: rootProject.file("release-keystore.jks"))
+            storePassword = System.getenv("STORE_PASSWORD") ?: "android"
+            keyAlias = System.getenv("KEY_ALIAS") ?: "release2"
+            keyPassword = System.getenv("KEY_PASSWORD") ?: "android"
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -36,6 +46,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    useLibrary("org.apache.http.legacy")
 
     kotlinOptions {
         jvmTarget = "17"
@@ -60,6 +72,14 @@ android {
             excludes += "/META-INF/INDEX.LIST"
         }
     }
+
+}
+
+// Google HTTP Client membawa httpclient:4.5 sebagai transitive dependency,
+// yang kelasnya duplikat dengan org.apache.http.legacy dari Android SDK.
+// Exclude global memastikan semua konfigurasi mewarisi pengecualian ini.
+configurations.all {
+    exclude(group = "org.apache.httpcomponents")
 }
 
 dependencies {
@@ -107,6 +127,15 @@ dependencies {
     }
     implementation(libs.google.auth.oauth2)
     implementation(libs.google.http.client.gson)
+
+    // Google Sign-In (OAuth 2.0 for users)
+    implementation(libs.play.services.auth)
+
+    // ─── Testing ──────────────────────────────────────────────────────
+    testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation(libs.mockk)
 }
 
 kapt {
