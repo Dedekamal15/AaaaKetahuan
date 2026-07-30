@@ -16,11 +16,13 @@ sealed class EndOfMonthPrediction {
      * Prediksi berhasil dihitung.
      *
      * @property currentTotal Total pengeluaran bulan ini (realisasi).
+     * @property monthlyIncome Total pemasukan bulan ini (anggaran).
      * @property predictedTotal Perkiraan total pengeluaran akhir bulan.
      * @property confidence Tingkat kepercayaan berdasarkan jumlah data historis.
      */
     data class Predicted(
         val currentTotal: Double,
+        val monthlyIncome: Double,
         val predictedTotal: Double,
         val confidence: PredictionConfidence
     ) : EndOfMonthPrediction()

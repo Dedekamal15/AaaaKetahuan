@@ -5,6 +5,7 @@ import com.example.aaaaketahuan.forecast.model.BalancePrediction
 import com.example.aaaaketahuan.forecast.model.DeficitRisk
 import com.example.aaaaketahuan.forecast.model.EndOfMonthPrediction
 import com.example.aaaaketahuan.forecast.model.PredictionConfidence
+import com.example.aaaaketahuan.forecast.model.RisikoDefisitResult
 import com.example.aaaaketahuan.forecast.model.RiskSeverity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -207,15 +208,17 @@ class ForecastRepository @Inject constructor(
         val daysInMonth = today.lengthOfMonth()
         val remainingDays = daysInMonth - today.dayOfMonth
 
-        val currentMonthKeluar = cache
+        val currentMonthData = cache
             .filter { it.date.month == today.month && it.date.year == today.year }
-            .sumOf { it.totalKeluar }
+        val currentMonthKeluar = currentMonthData.sumOf { it.totalKeluar }
+        val monthlyIncome = currentMonthData.sumOf { it.totalMasuk }
 
         val predictedRemaining = avgDailyKeluar * remainingDays
         val predictedTotal = currentMonthKeluar + predictedRemaining
 
         EndOfMonthPrediction.Predicted(
             currentTotal = currentMonthKeluar,
+            monthlyIncome = monthlyIncome,
             predictedTotal = predictedTotal,
             confidence = confidenceFromDays(days)
         )
@@ -272,7 +275,7 @@ class ForecastRepository @Inject constructor(
                 )
             }
 
-            val (days, avgDailyKeluar, avgDailyMasuk) = getAvailableDailyAverages(today)
+        val (days, avgDailyKeluar, avgDailyMasuk) = getAvailableDailyAverages(today)
 
             // Saldo aktual bulan berjalan
             val currentMonthData = cache.filter {
@@ -297,6 +300,8 @@ class ForecastRepository @Inject constructor(
             BalancePrediction.Predicted(
                 currentBalance = currentBalance,
                 predictedBalance = predictedBalance,
+                predictedIncome = predictedIncome,
+                predictedExpense = predictedExpense,
                 targetDate = targetDate.toString(),
                 confidence = confidence
             )
@@ -369,5 +374,67 @@ class ForecastRepository @Inject constructor(
                 }
             }
         }
+    }
+
+    // ─── Fitur 4: Risiko Defisit (Weekday/Weekend-aware + Prediksi Gaji) ──
+
+    /**
+     * Menghitung risiko defisit akhir bulan dengan **pola pengeluaran
+     * weekday/weekend** dan **prediksi gaji**.
+     *
+     * ## Perbedaan dengan [getDeficitRisk]
+     *
+     * | Aspek | [getDeficitRisk] (lama) | getAdvancedDeficitRisk (baru) |
+     * |-------|------------------------|-------------------------------|
+     * | Prediksi harian | Rata-rata datar 30 hari | Dipisah weekday vs weekend, bobot 60:40 |
+     * | Pemasukan | Rata-rata harian × sisa hari | Estimasi gaji dari histori (nominal + rentang tanggal) |
+     * | Simulasi | Flat rate | Harian, hari-per-hari sampai akhir bulan |
+     * | Confidence | Berdasar jumlah hari | Weakest-link: pengeluaran + gaji |
+     * | Output | [DeficitRisk] (sealed class) | [RisikoDefisitResult] (data class) |
+     *
+     * ## Minimum data
+     * - Histori pengeluaran >= 14 hari.
+     * - Untuk estimasi gaji: minimal 2 bulan histori gaji (jika kurang,
+     *   confidence gaji otomatis LOW).
+     *
+     * ## Output
+     * - [RisikoDefisitResult] dengan status, proyeksi saldo, tanggal potensi
+     *   defisit, dan confidence.
+     *
+     * @throws Exception jika cache gagal dibangun dan tidak ada cache lama.
+     */
+    suspend fun getAdvancedDeficitRisk(): RisikoDefisitResult = withContext(Dispatchers.Default) {
+        ensureCacheValid()
+        val allTransaksi = transaksiRepository.getAllTransaksi()
+
+        val today = LocalDate.now()
+        val endOfMonth = today.withDayOfMonth(today.lengthOfMonth())
+
+        // Saldo aktual dari cache (total pemasukan - total pengeluaran bulan berjalan)
+        val cache = cachedDailyTotals
+            ?: return@withContext DeficitRiskAnalyzer.hitungRisikoDefisit(
+                saldoSaatIni = 0.0,
+                riwayatPengeluaran = allTransaksi.filter { it.jenis == "keluar" },
+                riwayatPemasukan = allTransaksi.filter { it.jenis == "masuk" },
+                pemasukanBulanIni = 0.0,
+                today = today,
+                tanggalAkhirBulan = endOfMonth
+            )
+
+        val currentMonthData = cache.filter {
+            it.date.month == today.month && it.date.year == today.year
+        }
+        val saldoSaatIni = currentMonthData.sumOf { it.totalMasuk } -
+            currentMonthData.sumOf { it.totalKeluar }
+        val pemasukanBulanIni = currentMonthData.sumOf { it.totalMasuk }
+
+        DeficitRiskAnalyzer.hitungRisikoDefisit(
+            saldoSaatIni = saldoSaatIni,
+            riwayatPengeluaran = allTransaksi.filter { it.jenis == "keluar" },
+            riwayatPemasukan = allTransaksi.filter { it.jenis == "masuk" },
+            pemasukanBulanIni = pemasukanBulanIni,
+            today = today,
+            tanggalAkhirBulan = endOfMonth
+        )
     }
 }

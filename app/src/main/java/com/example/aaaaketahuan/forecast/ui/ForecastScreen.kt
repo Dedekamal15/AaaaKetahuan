@@ -179,6 +179,7 @@ fun ForecastScreen(
                     )
                     is EndOfMonthPrediction.Predicted -> EndOfMonthPredictedContent(
                         currentTotal = pred.currentTotal,
+                        monthlyIncome = pred.monthlyIncome,
                         predictedTotal = pred.predictedTotal,
                         confidence = pred.confidence
                     )
@@ -267,6 +268,8 @@ fun ForecastScreen(
                         is BalancePrediction.Predicted -> BalancePredictedContent(
                             currentBalance = pred.currentBalance,
                             predictedBalance = pred.predictedBalance,
+                            predictedIncome = pred.predictedIncome,
+                            predictedExpense = pred.predictedExpense,
                             targetDate = pred.targetDate,
                             confidence = pred.confidence
                         )
@@ -581,6 +584,7 @@ private fun InfoContent(
 @Composable
 private fun EndOfMonthPredictedContent(
     currentTotal: Double,
+    monthlyIncome: Double,
     predictedTotal: Double,
     confidence: PredictionConfidence
 ) {
@@ -589,6 +593,26 @@ private fun EndOfMonthPredictedContent(
         ConfidenceBadge(confidence = confidence)
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        // Monthly income (budget baseline)
+        if (monthlyIncome > 0) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Pemasukan bulan ini",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = monthlyIncome.toRupiah(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = IncomeGreen
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
 
         // Current spending
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -601,7 +625,8 @@ private fun EndOfMonthPredictedContent(
             Text(
                 text = currentTotal.toRupiah(),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = if (monthlyIncome > 0 && currentTotal > monthlyIncome) ExpenseRed
+                       else MaterialTheme.colorScheme.onSurface
             )
         }
 
@@ -619,15 +644,17 @@ private fun EndOfMonthPredictedContent(
                 text = predictedTotal.toRupiah(),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = if (monthlyIncome > 0 && predictedTotal > monthlyIncome) ExpenseRed
+                       else MaterialTheme.colorScheme.primary
             )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Progress bar: current vs predicted
-        val progressFraction = if (predictedTotal > 0)
-            (currentTotal / predictedTotal).toFloat().coerceIn(0f, 1f) else 0f
+        // Progress bar: current vs income (budget)
+        val budgetBase = if (monthlyIncome > 0) monthlyIncome else predictedTotal
+        val progressFraction = if (budgetBase > 0)
+            (currentTotal / budgetBase).toFloat().coerceIn(0f, 1f) else 0f
 
         Box(
             modifier = Modifier
@@ -640,7 +667,10 @@ private fun EndOfMonthPredictedContent(
                 modifier = Modifier
                     .fillMaxWidth(progressFraction)
                     .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.primary)
+                    .background(
+                        if (monthlyIncome > 0 && currentTotal > monthlyIncome) ExpenseRed
+                        else MaterialTheme.colorScheme.primary
+                    )
             )
         }
 
@@ -656,11 +686,41 @@ private fun EndOfMonthPredictedContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.weight(1f))
+            val remainingBudget = monthlyIncome - currentTotal
+            val sisaText = if (monthlyIncome > 0) {
+                if (remainingBudget >= 0) "Sisa: ${remainingBudget.toRupiah()}"
+                else "Defisit: ${(-remainingBudget).toRupiah()}"
+            } else {
+                "Sisa: ${(predictedTotal - currentTotal).coerceAtLeast(0.0).toRupiah()}"
+            }
             Text(
-                text = "Sisa: ${(predictedTotal - currentTotal).coerceAtLeast(0.0).toRupiah()}",
+                text = sisaText,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (monthlyIncome > 0 && remainingBudget < 0) ExpenseRed
+                       else MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+
+        // Over-budget warning
+        if (monthlyIncome > 0 && predictedTotal > monthlyIncome) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = ExpenseRed
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "Proyeksi over budget: ${(predictedTotal - monthlyIncome).toRupiah()}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ExpenseRed
+                )
+            }
         }
     }
 }
@@ -673,6 +733,8 @@ private fun EndOfMonthPredictedContent(
 private fun BalancePredictedContent(
     currentBalance: Double,
     predictedBalance: Double,
+    predictedIncome: Double,
+    predictedExpense: Double,
     targetDate: String,
     confidence: PredictionConfidence
 ) {
@@ -716,7 +778,31 @@ private fun BalancePredictedContent(
         amountColor = if (currentBalance >= 0) IncomeGreen else ExpenseRed
     )
 
-    Spacer(modifier = Modifier.height(4.dp))
+    Spacer(modifier = Modifier.height(8.dp))
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+    Spacer(modifier = Modifier.height(8.dp))
+
+    // Predicted additional income
+    if (predictedIncome > 0) {
+        AmountRow(
+            label = "Prediksi pemasukan",
+            amount = predictedIncome,
+            amountColor = IncomeGreen
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+    }
+
+    // Predicted additional expense
+    AmountRow(
+        label = "Prediksi pengeluaran",
+        amount = predictedExpense,
+        amountColor = ExpenseRed,
+        amountPrefix = if (predictedExpense > 0) "- " else ""
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+    Spacer(modifier = Modifier.height(8.dp))
 
     // Predicted balance
     val predColor = when {
@@ -730,22 +816,6 @@ private fun BalancePredictedContent(
         amountColor = predColor,
         amountFontWeight = FontWeight.Bold
     )
-
-    // Difference
-    val difference = predictedBalance - currentBalance
-    AnimatedVisibility(visible = difference != 0.0) {
-        Column {
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-            Spacer(modifier = Modifier.height(8.dp))
-            AmountRow(
-                label = if (difference >= 0) "Proyeksi kenaikan" else "Proyeksi penurunan",
-                amount = kotlin.math.abs(difference),
-                amountColor = if (difference >= 0) IncomeGreen else ExpenseRed,
-                amountPrefix = if (difference >= 0) "+ " else "- "
-            )
-        }
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════

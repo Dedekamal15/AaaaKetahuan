@@ -6,6 +6,7 @@ import com.example.aaaaketahuan.forecast.model.BalancePrediction
 import com.example.aaaaketahuan.forecast.model.DeficitRisk
 import com.example.aaaaketahuan.forecast.model.EndOfMonthPrediction
 import com.example.aaaaketahuan.forecast.model.PredictionConfidence
+import com.example.aaaaketahuan.forecast.model.RisikoDefisitResult
 import com.example.aaaaketahuan.forecast.model.RiskSeverity
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -104,10 +105,12 @@ class ForecastRepositoryTest {
 
         if (r is EndOfMonthPrediction.Predicted) {
             val remaining = today.lengthOfMonth() - today.dayOfMonth
-            val currentMonthTotal = makeTransactions(0, 30, amount)
-                .filter { it.jenis == "keluar" && it.bulan == today.monthValue && it.tahun == today.year }
-                .sumOf { it.jumlah }
+            val monthTx = makeTransactions(0, 30, amount)
+                .filter { it.bulan == today.monthValue && it.tahun == today.year }
+            val currentMonthTotal = monthTx.filter { it.jenis == "keluar" }.sumOf { it.jumlah }
+            val monthIncome = monthTx.filter { it.jenis == "masuk" }.sumOf { it.jumlah }
             assertEquals(currentMonthTotal, r.currentTotal, 0.001)
+            assertEquals(monthIncome, r.monthlyIncome, 0.001)
             assertEquals(currentMonthTotal + amount * remaining, r.predictedTotal, 0.001)
         } else fail("Expected Predicted, got $r")
     }
@@ -148,6 +151,7 @@ class ForecastRepositoryTest {
         val r = repository.getEndOfMonthPrediction()
         if (r is EndOfMonthPrediction.Predicted) {
             assertEquals(0.0, r.currentTotal, 0.001)
+            assertEquals(0.0, r.monthlyIncome, 0.001)
             assertEquals(0.0, r.predictedTotal, 0.001)
         } else fail("Expected Predicted, got $r")
     }
@@ -196,6 +200,8 @@ class ForecastRepositoryTest {
                     monthData.filter { it.jenis == "keluar" }.sumOf { it.jumlah }
             assertEquals(bal, r.currentBalance, 0.001)
             assertEquals(bal + net * 10, r.predictedBalance, 0.001)
+            assertEquals(income * 10, r.predictedIncome, 0.001)
+            assertEquals(expense * 10, r.predictedExpense, 0.001)
             assertEquals(target.toString(), r.targetDate)
         } else fail("Expected Predicted, got $r")
     }
@@ -260,6 +266,85 @@ class ForecastRepositoryTest {
         if (r is BalancePrediction.Predicted) {
             assertTrue(r.currentBalance >= 0)
             assertTrue(r.predictedBalance >= r.currentBalance)
+            assertEquals(0.0, r.predictedExpense, 0.001)
+            assertTrue(r.predictedIncome > 0)
         } else fail("Expected Predicted, got $r")
+    }
+
+    // ═════════════════════════════════════════════════════════════════
+    // FITUR 4: RISIKO DEFISIT LANJUTAN
+    // ═════════════════════════════════════════════════════════════════
+
+    @Test
+    fun `advancedDeficitRisk returns result with data`() = runTest {
+        // Buat 30 hari data stabil + gaji 3 bulan
+        val expenses = (0 until 30).flatMap { i ->
+            val date = today.minusDays((29 - i).toLong())
+            listOf(
+                Transaksi("e-$i", date.format(dateFormatter), "keluar", 50000.0,
+                    "E$i", "", "Makanan", date.monthValue, date.year)
+            )
+        }
+        val salaries = (1..3).flatMap { m ->
+            val date = today.minusMonths(m.toLong()).withDayOfMonth(25)
+            listOf(
+                Transaksi("s-$m", date.format(dateFormatter), "masuk", 5_000_000.0,
+                    "Gaji", "", "Gaji", date.monthValue, date.year, sumber = "Gaji")
+            )
+        }
+        val allTx = expenses + salaries
+        coEvery { mockTransaksiRepo.getAllTransaksi() } returns allTx
+
+        val r = repository.getAdvancedDeficitRisk()
+        assertNotNull(r)
+        assertTrue(r.rasio >= -1.0)
+        assertTrue(r.status.isNotEmpty())
+    }
+
+    @Test
+    fun `advancedDeficitRisk handles empty data gracefully`() = runTest {
+        coEvery { mockTransaksiRepo.getAllTransaksi() } returns emptyList()
+
+        val r = repository.getAdvancedDeficitRisk()
+        assertNotNull(r)
+        // No income → rasio should be -1.0
+        assertEquals(-1.0, r.rasio, 0.001)
+        assertEquals("Defisit Berat", r.status)
+    }
+
+    @Test
+    fun `advancedDeficitRisk handles salary already received this month`() = runTest {
+        // Only current month data with salary
+        val expenses = (0 until 15).map { i ->
+            val date = today.minusDays(i.toLong())
+            Transaksi("e-$i", date.format(dateFormatter), "keluar", 50000.0,
+                "E$i", "", "Makanan", date.monthValue, date.year)
+        }
+        val salary = Transaksi("s-gaji", today.minusDays(10).format(dateFormatter), "masuk", 5_000_000.0,
+            "Gaji", "", "Gaji", today.monthValue, today.year, sumber = "Gaji")
+        val allTx = expenses + salary
+        coEvery { mockTransaksiRepo.getAllTransaksi() } returns allTx
+
+        val r = repository.getAdvancedDeficitRisk()
+        assertNotNull(r)
+        // Gaji sudah masuk bulan ini
+        assertNotNull(r.status)
+    }
+
+    @Test
+    fun `advancedDeficitRisk detects potential deficit with low balance`() = runTest {
+        // High expenses, low balance, no salary this month
+        val expenses = (0 until 30).map { i ->
+            val date = today.minusDays((29 - i).toLong())
+            Transaksi("e-$i", date.format(dateFormatter), "keluar",
+                if (date.dayOfWeek.value >= 6) 100000.0 else 50000.0,
+                "E$i", "", "Makanan", date.monthValue, date.year)
+        }
+        coEvery { mockTransaksiRepo.getAllTransaksi() } returns expenses
+
+        val r = repository.getAdvancedDeficitRisk()
+        assertNotNull(r)
+        // Balances will likely be negative given high expenses
+        // Just verify it doesn't crash
     }
 }

@@ -1,6 +1,7 @@
 package com.example.aaaaketahuan.di
 
 import android.content.Context
+import com.example.aaaaketahuan.data.remote.DriveSharingHelper
 import com.example.aaaaketahuan.data.remote.GoogleSheetsHelper
 import com.example.aaaaketahuan.data.repository.TransaksiRepository
 import dagger.Module
@@ -26,8 +27,9 @@ object AppModule {
     @Singleton
     fun provideTransaksiRepository(
         @ApplicationContext context: Context,
-        sheetsHelper: GoogleSheetsHelper
+        sheetsHelper: GoogleSheetsHelper,
+        driveSharingHelper: DriveSharingHelper
     ): TransaksiRepository {
-        return TransaksiRepository(context, sheetsHelper)
+        return TransaksiRepository(context, sheetsHelper, driveSharingHelper)
     }
 }

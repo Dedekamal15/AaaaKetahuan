@@ -125,6 +125,10 @@ dependencies {
     implementation(libs.google.api.services.sheets) {
         exclude(group = "org.apache.httpcomponents")
     }
+    // Google Drive API (for sharing spreadsheets)
+    implementation(libs.google.api.services.drive) {
+        exclude(group = "org.apache.httpcomponents")
+    }
     implementation(libs.google.auth.oauth2)
     implementation(libs.google.http.client.gson)
 

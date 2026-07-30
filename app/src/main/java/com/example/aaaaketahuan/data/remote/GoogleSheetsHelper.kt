@@ -5,6 +5,8 @@ import com.example.aaaaketahuan.data.model.Transaksi
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
+import com.google.api.services.drive.Drive
+import com.google.api.services.drive.DriveScopes
 import com.google.api.services.sheets.v4.Sheets
 import com.google.api.services.sheets.v4.SheetsScopes
 import com.google.api.services.sheets.v4.model.AddSheetRequest
@@ -37,21 +39,44 @@ class GoogleSheetsHelper(private val context: Context) {
     private val range: String get() = "$sheetName!A:I"
 
     /** Singleton HTTP transport — created once, reused for all API calls */
-    private val httpTransport by lazy {
+    val httpTransport by lazy {
         GoogleNetHttpTransport.newTrustedTransport()
     }
 
     /**
-     * Set the authenticated Google account for Sheets API access.
+     * Sets the authenticated Google account for both Sheets API and Drive API.
      * Call this after user successfully logs in via GoogleSignIn.
+     *
+     * Scopes yang diminta:
+     * - [SheetsScopes.SPREADSHEETS] — read/write Google Sheets (existing)
+     * - [DriveScopes.DRIVE_FILE] — share spreadsheets with other users (new)
+     * - [DriveScopes.DRIVE_METADATA_READONLY] — discover shared spreadsheets (new)
+     *
+     * Jika user pertama kali login setelah update ini, Google akan meminta
+     * persetujuan tambahan untuk scope Drive via consent screen.
      */
     fun setAccount(accountEmail: String) {
         credential = GoogleAccountCredential.usingOAuth2(
             context,
-            listOf(SheetsScopes.SPREADSHEETS)
+            listOf(
+                SheetsScopes.SPREADSHEETS,
+                DriveScopes.DRIVE_FILE,
+                DriveScopes.DRIVE_METADATA_READONLY
+            )
         ).apply {
             selectedAccountName = accountEmail
         }
+    }
+
+    /**
+     * Builds a Drive API service using the same authenticated credential.
+     * Returns null if not authenticated.
+     */
+    fun getDriveService(): Drive? {
+        val cred = credential ?: return null
+        return Drive.Builder(httpTransport, GsonFactory.getDefaultInstance(), cred)
+            .setApplicationName(APPLICATION_NAME)
+            .build()
     }
 
     fun clearAccount() {

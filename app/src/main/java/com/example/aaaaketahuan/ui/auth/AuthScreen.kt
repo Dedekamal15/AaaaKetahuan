@@ -81,31 +81,45 @@ fun AuthScreen(viewModel: TransaksiViewModel) {
         scope: kotlinx.coroutines.CoroutineScope,
         sheetCreated: () -> Unit = {}
     ) {
-        // Check if this email already has a spreadsheet saved from previous login
+        // 1. Coba lokal (SharedPreferences)
         val hasExisting = viewModel.restoreExistingSpreadsheet(email)
         if (hasExisting) {
             scope.launch {
                 snackbarHostState.showSnackbar("Spreadsheet yang sudah ada ditemukan dan dipulihkan!")
             }
             sheetCreated()
-        } else {
-            isCreatingSpreadsheet = true
-            viewModel.createNewSpreadsheet(
-                onSuccess = { _ ->
-                    isCreatingSpreadsheet = false
-                    sheetCreated()
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Spreadsheet baru berhasil dibuat!")
-                    }
-                },
-                onError = { msg ->
-                    isCreatingSpreadsheet = false
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Gagal: $msg")
-                    }
-                }
-            )
+            return
         }
+
+        // 2. Fallback: cari di Drive API
+        isCreatingSpreadsheet = true
+        viewModel.restoreExistingSpreadsheetFromDrive(
+            onFound = { _ ->
+                isCreatingSpreadsheet = false
+                sheetCreated()
+                scope.launch {
+                    snackbarHostState.showSnackbar("Spreadsheet ditemukan di Drive dan dipulihkan!")
+                }
+            },
+            onNotFound = {
+                // 3. Tidak ditemukan di Drive → buat baru
+                viewModel.createNewSpreadsheet(
+                    onSuccess = { _ ->
+                        isCreatingSpreadsheet = false
+                        sheetCreated()
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Spreadsheet baru berhasil dibuat!")
+                        }
+                    },
+                    onError = { msg ->
+                        isCreatingSpreadsheet = false
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Gagal: $msg")
+                        }
+                    }
+                )
+            }
+        )
     }
 
     // Launcher for Google Sign-In intent

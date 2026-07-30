@@ -4,6 +4,7 @@ import com.example.aaaaketahuan.forecast.model.BalancePrediction
 import com.example.aaaaketahuan.forecast.model.DeficitRisk
 import com.example.aaaaketahuan.forecast.model.EndOfMonthPrediction
 import com.example.aaaaketahuan.forecast.model.PredictionConfidence
+import com.example.aaaaketahuan.forecast.model.RisikoDefisitResult
 import com.example.aaaaketahuan.forecast.model.RiskSeverity
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -70,7 +71,7 @@ class ForecastViewModelTest {
     @Test
     fun `endOfMonth loading state transitions`() = runTest {
         coEvery { mockRepo.getEndOfMonthPrediction() } returns
-                EndOfMonthPrediction.Predicted(100.0, 200.0, PredictionConfidence.HIGH)
+                EndOfMonthPrediction.Predicted(100.0, 300.0, 200.0, PredictionConfidence.HIGH)
 
         // Check initial state
         assertEquals(false, viewModel.isLoading.value)
@@ -85,6 +86,7 @@ class ForecastViewModelTest {
         val r = viewModel.endOfMonthPrediction.value
         if (r is EndOfMonthPrediction.Predicted) {
             assertEquals(100.0, r.currentTotal, 0.001)
+            assertEquals(300.0, r.monthlyIncome, 0.001)
             assertEquals(200.0, r.predictedTotal, 0.001)
             assertEquals(PredictionConfidence.HIGH, r.confidence)
         } else fail("Expected Predicted, got $r")
@@ -127,6 +129,8 @@ class ForecastViewModelTest {
         val predicted = BalancePrediction.Predicted(
             currentBalance = 500000.0,
             predictedBalance = 750000.0,
+            predictedIncome = 300000.0,
+            predictedExpense = 50000.0,
             targetDate = LocalDate.now().plusDays(7).toString(),
             confidence = PredictionConfidence.MEDIUM
         )
@@ -139,6 +143,8 @@ class ForecastViewModelTest {
         if (r is BalancePrediction.Predicted) {
             assertEquals(500000.0, r.currentBalance, 0.001)
             assertEquals(750000.0, r.predictedBalance, 0.001)
+            assertEquals(300000.0, r.predictedIncome, 0.001)
+            assertEquals(50000.0, r.predictedExpense, 0.001)
             assertEquals(PredictionConfidence.MEDIUM, r.confidence)
         } else fail("Expected Predicted, got $r")
     }
@@ -218,7 +224,7 @@ class ForecastViewModelTest {
     @Test
     fun `refreshAll resets and reloads endOfMonth and deficit`() = runTest {
         coEvery { mockRepo.getEndOfMonthPrediction() } returns
-                EndOfMonthPrediction.Predicted(100.0, 200.0, PredictionConfidence.LOW)
+                EndOfMonthPrediction.Predicted(100.0, 400.0, 200.0, PredictionConfidence.LOW)
         coEvery { mockRepo.getDeficitRisk() } returns DeficitRisk.Safe(300.0, 300.0)
 
         // First load
@@ -245,5 +251,71 @@ class ForecastViewModelTest {
 
         viewModel.clearError()
         assertNull(viewModel.errorMessage.value)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // FITUR 4: RISIKO DEFISIT LANJUTAN
+    // ═══════════════════════════════════════════════════════════════
+
+    @Test
+    fun `advancedDeficitRisk emits result`() = runTest {
+        val mockResult = RisikoDefisitResult(
+            status = "Sehat",
+            icon = "\uD83D\uDFE2",
+            rasio = 0.15,
+            proyeksiSaldoAkhir = 1_500_000.0,
+            tanggalPotensiDefisit = null,
+            confidence = PredictionConfidence.HIGH,
+            confidenceReason = ""
+        )
+        coEvery { mockRepo.getAdvancedDeficitRisk() } returns mockResult
+
+        viewModel.loadAdvancedDeficitRisk()
+        advance()
+
+        val r = viewModel.advancedDeficitRisk.value
+        assertNotNull(r)
+        assertEquals("Sehat", r!!.status)
+        assertEquals(0.15, r.rasio, 0.001)
+        assertEquals(PredictionConfidence.HIGH, r.confidence)
+    }
+
+    @Test
+    fun `advancedDeficitRisk emits result with deficit`() = runTest {
+        val mockResult = RisikoDefisitResult(
+            status = "Defisit Berat",
+            icon = "\uD83D\uDD34",
+            rasio = -0.5,
+            proyeksiSaldoAkhir = -500_000.0,
+            tanggalPotensiDefisit = LocalDate.now().plusDays(5),
+            confidence = PredictionConfidence.MEDIUM,
+            confidenceReason = ""
+        )
+        coEvery { mockRepo.getAdvancedDeficitRisk() } returns mockResult
+
+        viewModel.loadAdvancedDeficitRisk()
+        advance()
+
+        val r = viewModel.advancedDeficitRisk.value
+        assertNotNull(r)
+        assertEquals("Defisit Berat", r!!.status)
+        assertTrue(r.rasio < 0)
+        assertNotNull(r.tanggalPotensiDefisit)
+    }
+
+    @Test
+    fun `advancedDeficitRisk sets errorMessage on exception`() = runTest {
+        coEvery { mockRepo.getAdvancedDeficitRisk() } throws RuntimeException("gagal analisis")
+
+        viewModel.loadAdvancedDeficitRisk()
+        advance()
+
+        assertNotNull(viewModel.errorMessage.value)
+        assertTrue(viewModel.errorMessage.value!!.contains("gagal analisis"))
+    }
+
+    @Test
+    fun `advancedDeficitRisk is initially null`() {
+        assertNull(viewModel.advancedDeficitRisk.value)
     }
 }

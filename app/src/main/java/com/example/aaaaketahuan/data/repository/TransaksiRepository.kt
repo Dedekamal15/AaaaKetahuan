@@ -7,6 +7,8 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
 import com.example.aaaaketahuan.data.model.Transaksi
+import com.example.aaaaketahuan.data.remote.DriveAuthException
+import com.example.aaaaketahuan.data.remote.DriveSharingHelper
 import com.example.aaaaketahuan.data.remote.GoogleSheetsHelper
 import com.example.aaaaketahuan.util.CsvExporter
 import com.example.aaaaketahuan.util.CsvImporter
@@ -25,7 +27,8 @@ import javax.inject.Inject
 
 class TransaksiRepository @Inject constructor(
     private val context: Context,
-    private val sheetsHelper: GoogleSheetsHelper
+    private val sheetsHelper: GoogleSheetsHelper,
+    private val driveSharingHelper: DriveSharingHelper
 ) {
     private val prefs: SharedPreferences
         get() = context.getSharedPreferences("aaaaketahuan_config", Context.MODE_PRIVATE)
@@ -680,4 +683,83 @@ class TransaksiRepository @Inject constructor(
 
     fun getHiddenKategori(): List<String> = loadStringList(KEY_HIDDEN_KATEGORI)
     fun saveHiddenKategori(list: List<String>) = saveStringList(KEY_HIDDEN_KATEGORI, list)
+
+    // ═══════════════════════════════════════════════════════════════
+    // KOLABORASI — UNDANG USER
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * User A: Mengundang User B untuk bergabung ke spreadsheet yang sama.
+     * Google Drive mengirim email notifikasi ke [userEmail] secara otomatis.
+     */
+    suspend fun inviteUser(userEmail: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val driveService = sheetsHelper.getDriveService()
+            ?: return@withContext Result.failure(Exception("Belum login."))
+        val id = getSpreadsheetId()
+        if (id.isBlank()) return@withContext Result.failure(Exception("Buat spreadsheet dulu."))
+        driveSharingHelper.shareSpreadsheet(driveService, id, userEmail)
+    }
+
+    /**
+     * User B: Mengecek apakah ada spreadsheet AaaaKetahuan yang dibagikan.
+     */
+    suspend fun checkForInvitations(): Result<List<DriveSharingHelper.SharedSpreadsheetInfo>> =
+        withContext(Dispatchers.IO) {
+            val drive = sheetsHelper.getDriveService()
+                ?: return@withContext Result.success(emptyList())
+            driveSharingHelper.findSharedSpreadsheets(drive)
+        }
+
+    /**
+     * User B: Menerima undangan — replace spreadsheet aktif + data lokal.
+     */
+    suspend fun acceptInvitation(sharedSpreadsheetId: String): Result<Int> =
+        withContext(Dispatchers.IO) {
+            try {
+                saveSpreadsheetConfig(sharedSpreadsheetId)
+                restoreAllFromSheet()
+            } catch (e: Exception) {
+                Result.failure(Exception("Gagal: ${e.localizedMessage}"))
+            }
+        }
+
+    /** User B: Menolak undangan (clear UI state). */
+    fun rejectInvitation() = Unit
+
+    /** Mendapatkan daftar kolaborator spreadsheet saat ini. */
+    suspend fun getCollaborators(): Result<List<DriveSharingHelper.CollaboratorInfo>> =
+        withContext(Dispatchers.IO) {
+            val drive = sheetsHelper.getDriveService()
+                ?: return@withContext Result.success(emptyList())
+            val id = getSpreadsheetId()
+            if (id.isBlank()) return@withContext Result.success(emptyList())
+            driveSharingHelper.listCollaborators(drive, id)
+        }
+
+    /**
+     * User A: Hapus akses kolaborator dari spreadsheet.
+     * @param permissionId ID permission dari [CollaboratorInfo.permissionId].
+     */
+    suspend fun removeCollaborator(permissionId: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            val drive = sheetsHelper.getDriveService()
+                ?: return@withContext Result.failure(Exception("Belum login."))
+            val id = getSpreadsheetId()
+            if (id.isBlank()) return@withContext Result.failure(Exception("Buat spreadsheet dulu."))
+            driveSharingHelper.removePermission(drive, id, permissionId)
+        }
+
+    /**
+     * Mencari spreadsheet "AaaaKetahuan" milik user sendiri via Drive API.
+     * Fallback ketika [restoreSpreadsheetForEmail] gagal (misal data lokal hilang).
+     *
+     * @return Spreadsheet ID jika ditemukan, null jika tidak.
+     */
+    suspend fun findOwnSpreadsheetFromDrive(): Result<String?> =
+        withContext(Dispatchers.IO) {
+            val drive = sheetsHelper.getDriveService()
+                ?: return@withContext Result.success(null)
+            val result = driveSharingHelper.findOwnSpreadsheet(drive)
+            result.map { it?.spreadsheetId }
+        }
 }

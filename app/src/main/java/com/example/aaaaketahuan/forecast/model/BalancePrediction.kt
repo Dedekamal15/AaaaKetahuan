@@ -19,12 +19,16 @@ sealed class BalancePrediction {
      *
      * @property currentBalance Saldo aktual saat ini (masuk - keluar bulan berjalan).
      * @property predictedBalance Perkiraan saldo pada [targetDate].
+     * @property predictedIncome Perkiraan total pemasukan tambahan hingga [targetDate].
+     * @property predictedExpense Perkiraan total pengeluaran tambahan hingga [targetDate].
      * @property targetDate Tanggal target yang diminta (format "yyyy-MM-dd").
      * @property confidence Tingkat kepercayaan. Diturunkan ke LOW jika target >90 hari.
      */
     data class Predicted(
         val currentBalance: Double,
         val predictedBalance: Double,
+        val predictedIncome: Double,
+        val predictedExpense: Double,
         val targetDate: String,
         val confidence: PredictionConfidence
     ) : BalancePrediction()

@@ -129,6 +129,11 @@ fun PengaturanScreen(
     var showMetodeDialog by remember { mutableStateOf(false) }
     var showSumberDialog by remember { mutableStateOf(false) }
 
+    // Collaboration state
+    var inviteEmail by remember { mutableStateOf("") }
+    var showInviteDialog by remember { mutableStateOf(false) }
+    var showInviteDiscoveryDialog by remember { mutableStateOf(false) }
+
     // Account Picker launcher (pilih akun Google via system dialog)
     val context = LocalContext.current
     val accountPickerLauncher = rememberLauncherForActivityResult(
@@ -155,23 +160,38 @@ fun PengaturanScreen(
                     // Check if we should offer to restore data from sheets
                     viewModel.checkAndOfferRestore()
                 } else {
-                    // No existing spreadsheet → create a new one
+                    // Fallback: cari di Drive API terlebih dahulu
                     isCreatingSpreadsheet = true
-                    viewModel.createNewSpreadsheet(
-                        onSuccess = { id ->
+                    viewModel.restoreExistingSpreadsheetFromDrive(
+                        onFound = { id ->
                             isCreatingSpreadsheet = false
                             accountEmail = email
                             isConnected = true
                             spreadsheetId = id
                             scope.launch {
-                                snackbarHostState.showSnackbar("Spreadsheet berhasil dibuat!")
+                                snackbarHostState.showSnackbar("Spreadsheet ditemukan di Drive dan dipulihkan!")
                             }
+                            viewModel.checkAndOfferRestore()
                         },
-                        onError = { msg ->
-                            isCreatingSpreadsheet = false
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Gagal: $msg")
-                            }
+                        onNotFound = {
+                            // Tidak ditemukan di Drive → buat baru
+                            viewModel.createNewSpreadsheet(
+                                onSuccess = { id ->
+                                    isCreatingSpreadsheet = false
+                                    accountEmail = email
+                                    isConnected = true
+                                    spreadsheetId = id
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Spreadsheet baru berhasil dibuat!")
+                                    }
+                                },
+                                onError = { msg ->
+                                    isCreatingSpreadsheet = false
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Gagal: $msg")
+                                    }
+                                }
+                            )
                         }
                     )
                 }
@@ -197,25 +217,60 @@ fun PengaturanScreen(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            // Izin disetujui — coba buat spreadsheet lagi
+            // Izin disetujui — cek Drive dulu baru buat baru
+            val currentEmail = viewModel.getConnectedAccount()
             isCreatingSpreadsheet = true
-            viewModel.createNewSpreadsheet(
-                onSuccess = { id ->
-                    isCreatingSpreadsheet = false
-                    accountEmail = viewModel.getConnectedAccount()
-                    isConnected = true
-                    spreadsheetId = id
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Spreadsheet berhasil dibuat!")
+            if (currentEmail != null) {
+                viewModel.restoreExistingSpreadsheetFromDrive(
+                    onFound = { id ->
+                        isCreatingSpreadsheet = false
+                        accountEmail = currentEmail
+                        isConnected = true
+                        spreadsheetId = id
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Spreadsheet ditemukan di Drive!")
+                        }
+                        viewModel.checkAndOfferRestore()
+                    },
+                    onNotFound = {
+                        viewModel.createNewSpreadsheet(
+                            onSuccess = { id ->
+                                isCreatingSpreadsheet = false
+                                accountEmail = currentEmail
+                                isConnected = true
+                                spreadsheetId = id
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Spreadsheet baru berhasil dibuat!")
+                                }
+                            },
+                            onError = { msg ->
+                                isCreatingSpreadsheet = false
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Gagal: $msg")
+                                }
+                            }
+                        )
                     }
-                },
-                onError = { msg ->
-                    isCreatingSpreadsheet = false
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Gagal: $msg")
+                )
+            } else {
+                viewModel.createNewSpreadsheet(
+                    onSuccess = { id ->
+                        isCreatingSpreadsheet = false
+                        accountEmail = viewModel.getConnectedAccount()
+                        isConnected = true
+                        spreadsheetId = id
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Spreadsheet berhasil dibuat!")
+                        }
+                    },
+                    onError = { msg ->
+                        isCreatingSpreadsheet = false
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Gagal: $msg")
+                        }
                     }
-                }
-            )
+                )
+            }
         } else {
             scope.launch {
                 snackbarHostState.showSnackbar("Izin akses Google Sheets ditolak")
@@ -254,6 +309,20 @@ fun PengaturanScreen(
         val msg = restoreMessage ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(msg)
         viewModel.clearRestoreMessage()
+    }
+
+    // Observe invitation message → show snackbar, then clear
+    val invitationMessage by viewModel.invitationMessage.collectAsState()
+    LaunchedEffect(invitationMessage) {
+        val msg = invitationMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(msg)
+        viewModel.clearInvitationMessage()
+    }
+
+    // Observe invitation discovery dialog
+    val showDiscovery by viewModel.showInviteDiscovery.collectAsState()
+    LaunchedEffect(showDiscovery) {
+        showInviteDiscoveryDialog = showDiscovery
     }
 
     // Load current config
@@ -491,6 +560,42 @@ fun PengaturanScreen(
                         value = "${viewModel.getEffectiveSumberPemasukan().size} sumber",
                         showDivider = false,
                         onClick = { showSumberDialog = true }
+                    )
+                }
+            }
+
+            // ─── Kolaborasi Section ─────────────────────────────────────
+            SettingsSection(
+                title = "Kolaborasi",
+                subtitle = "Undang pasangan/keluarga untuk keluar bersama."
+            ) {
+                SettingsCard {
+                    // Invite by email
+                    SettingsItem(
+                        icon = Icons.Default.Person,
+                        label = "Undang via Email",
+                        value = if (isConnected) "Kirim undangan" else "Hubungkan dulu",
+                        onClick = {
+                            if (isConnected) {
+                                inviteEmail = ""
+                                showInviteDialog = true
+                            } else {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("Hubungkan Google Spreadsheet dulu")
+                                }
+                            }
+                        }
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                    )
+                    // Check for invitations
+                    SettingsItem(
+                        icon = Icons.Default.CloudSync,
+                        label = "Cek Undangan Masuk",
+                        value = "",
+                        showDivider = false,
+                        onClick = { viewModel.checkForInvitations() }
                     )
                 }
             }
@@ -919,6 +1024,182 @@ fun PengaturanScreen(
                 TextButton(onClick = { showLogoutDialog = false }) {
                     Text("Batal")
                 }
+            }
+        )
+    }
+
+    // ─── Invite User Dialog (User A) ─────────────────────────────
+    if (showInviteDialog) {
+        val isInviting by viewModel.isInviting.collectAsState()
+        val collaborators by viewModel.collaborators.collectAsState()
+
+        // Muat daftar kolaborator saat dialog dibuka
+        LaunchedEffect(showInviteDialog) {
+            viewModel.loadCollaborators()
+        }
+
+        AlertDialog(
+            onDismissRequest = { if (!isInviting) showInviteDialog = false },
+            icon = { Icon(Icons.Default.Person, contentDescription = null) },
+            title = { Text("Undang Kolaborator") },
+            text = {
+                Column {
+                    Text(
+                        text = "Masukkan email Google pasangan/keluarga untuk bergabung " +
+                                "ke spreadsheet yang sama.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = inviteEmail,
+                        onValueChange = { inviteEmail = it },
+                        label = { Text("Email") },
+                        placeholder = { Text("nama@gmail.com") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !isInviting
+                    )
+                    if (isInviting) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Memproses...", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    // Daftar kolaborator
+                    if (collaborators.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Kolaborator saat ini:",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        collaborators.forEach { col ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "• ${col.email} (${col.role})",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(
+                                    onClick = { viewModel.removeCollaborator(col.permissionId) },
+                                    enabled = !isInviting,
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Hapus",
+                                        tint = ExpenseRed,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (inviteEmail.isNotBlank()) {
+                            viewModel.inviteUser(inviteEmail.trim())
+                        }
+                    },
+                    enabled = inviteEmail.isNotBlank() && !isInviting
+                ) { Text("Kirim Undangan") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showInviteDialog = false },
+                    enabled = !isInviting
+                ) { Text("Tutup") }
+            }
+        )
+    }
+
+    // ─── Invitation Discovery Dialog (User B) ────────────────────
+    if (showInviteDiscoveryDialog) {
+        val foundSpreadsheets by viewModel.foundSharedSpreadsheets.collectAsState()
+        val isChecking by viewModel.isCheckingInvitations.collectAsState()
+
+        AlertDialog(
+            onDismissRequest = { if (!isChecking) showInviteDiscoveryDialog = false },
+            icon = { Icon(Icons.Default.CloudSync, contentDescription = null) },
+            title = { Text("Undangan Ditemukan!") },
+            text = {
+                Column {
+                    if (isChecking) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Mencari...")
+                        }
+                    } else if (foundSpreadsheets.isEmpty()) {
+                        Text("Tidak ada undangan aktif saat ini.")
+                    } else {
+                        Text(
+                            text = "Spreadsheet AaaaKetahuan berikut dibagikan ke akun Anda. " +
+                                    "Pilih untuk mengganti data lokal Anda.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        foundSpreadsheets.forEach { sheet ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                ),
+                                onClick = { viewModel.acceptInvitation(sheet.spreadsheetId) }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            sheet.name,
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
+                                        Text(
+                                            sheet.ownerEmail ?: "Tidak diketahui",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.rejectInvitation()
+                        showInviteDiscoveryDialog = false
+                    },
+                    enabled = !isChecking
+                ) { Text("Tutup") }
             }
         )
     }

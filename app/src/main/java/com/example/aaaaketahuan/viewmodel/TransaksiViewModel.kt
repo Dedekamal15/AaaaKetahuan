@@ -7,6 +7,7 @@ import com.example.aaaaketahuan.data.model.KategoriEnum
 import com.example.aaaaketahuan.data.model.MetodeBayarEnum
 import com.example.aaaaketahuan.data.model.SumberPemasukanEnum
 import com.example.aaaaketahuan.data.model.Transaksi
+import com.example.aaaaketahuan.data.remote.DriveSharingHelper
 import com.example.aaaaketahuan.data.repository.TransaksiRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -306,6 +307,37 @@ class TransaksiViewModel @Inject constructor(
     }
 
     /**
+     * Fallback: cari spreadsheet milik user sendiri via Drive API
+     * ketika [restoreExistingSpreadsheet] gagal (data lokal hilang).
+     *
+     * @param onFound dipanggil dengan spreadsheet ID jika ditemukan.
+     * @param onNotFound dipanggil jika tidak ada spreadsheet.
+     */
+    fun restoreExistingSpreadsheetFromDrive(
+        onFound: (String) -> Unit,
+        onNotFound: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            try {
+                val result = repository.findOwnSpreadsheetFromDrive()
+                result.fold(
+                    onSuccess = { spreadsheetId ->
+                        if (spreadsheetId != null) {
+                            repository.saveSpreadsheetConfig(spreadsheetId)
+                            onFound(spreadsheetId)
+                        } else {
+                            onNotFound()
+                        }
+                    },
+                    onFailure = { onNotFound() }
+                )
+            } catch (_: Exception) {
+                onNotFound()
+            }
+        }
+    }
+
+    /**
      * Creates a new spreadsheet in the user's Google Drive.
      * Must be called AFTER [connectGoogleAccount].
      */
@@ -569,5 +601,169 @@ class TransaksiViewModel @Inject constructor(
     /** Clear just the message (after snackbar has been shown) */
     fun clearRestoreMessage() {
         _restoreMessage.value = null
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // KOLABORASI — UNDANG USER
+    // ═══════════════════════════════════════════════════════════════
+
+    private val _collaborators = MutableStateFlow<List<DriveSharingHelper.CollaboratorInfo>>(emptyList())
+    val collaborators: StateFlow<List<DriveSharingHelper.CollaboratorInfo>> = _collaborators.asStateFlow()
+
+    private val _isInviting = MutableStateFlow(false)
+    val isInviting: StateFlow<Boolean> = _isInviting.asStateFlow()
+
+    private val _invitationMessage = MutableStateFlow<String?>(null)
+    val invitationMessage: StateFlow<String?> = _invitationMessage.asStateFlow()
+
+    // ——— Invitation discovery (User B) ———
+
+    private val _showInviteDiscovery = MutableStateFlow(false)
+    val showInviteDiscovery: StateFlow<Boolean> = _showInviteDiscovery.asStateFlow()
+
+    private val _foundSharedSpreadsheets = MutableStateFlow<List<DriveSharingHelper.SharedSpreadsheetInfo>>(emptyList())
+    val foundSharedSpreadsheets: StateFlow<List<DriveSharingHelper.SharedSpreadsheetInfo>> =
+        _foundSharedSpreadsheets.asStateFlow()
+
+    private val _isCheckingInvitations = MutableStateFlow(false)
+    val isCheckingInvitations: StateFlow<Boolean> = _isCheckingInvitations.asStateFlow()
+
+    /**
+     * User A: Kirim undangan kolaborasi via email.
+     */
+    fun inviteUser(email: String) {
+        viewModelScope.launch {
+            _isInviting.value = true
+            _invitationMessage.value = null
+            try {
+                val result = repository.inviteUser(email)
+                result.fold(
+                    onSuccess = {
+                        _invitationMessage.value = "Undangan terkirim ke $email"
+                    },
+                    onFailure = { error ->
+                        _invitationMessage.value = "Gagal: ${error.message}"
+                    }
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _invitationMessage.value = "Gagal: ${e.message}"
+            } finally {
+                _isInviting.value = false
+            }
+        }
+    }
+
+    /**
+     * User A: Muat daftar kolaborator saat ini.
+     */
+    fun loadCollaborators() {
+        viewModelScope.launch {
+            try {
+                val result = repository.getCollaborators()
+                result.fold(
+                    onSuccess = { _collaborators.value = it },
+                    onFailure = { /* silent */ }
+                )
+            } catch (_: Exception) { }
+        }
+    }
+
+    /**
+     * User B: Cek undangan yang masuk.
+     */
+    fun checkForInvitations() {
+        viewModelScope.launch {
+            _isCheckingInvitations.value = true
+            _invitationMessage.value = null
+            try {
+                val result = repository.checkForInvitations()
+                result.fold(
+                    onSuccess = { list ->
+                        _foundSharedSpreadsheets.value = list
+                        _showInviteDiscovery.value = list.isNotEmpty()
+                    },
+                    onFailure = { error ->
+                        _invitationMessage.value = "Gagal: ${error.message}"
+                    }
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _invitationMessage.value = "Gagal: ${e.message}"
+            } finally {
+                _isCheckingInvitations.value = false
+            }
+        }
+    }
+
+    /**
+     * User B: Terima undangan — replace data lokal dengan spreadsheet bersama.
+     */
+    fun acceptInvitation(spreadsheetId: String) {
+        viewModelScope.launch {
+            _isInviting.value = true
+            _invitationMessage.value = null
+            try {
+                val result = repository.acceptInvitation(spreadsheetId)
+                result.fold(
+                    onSuccess = { count ->
+                        _invitationMessage.value = "Berhasil! $count transaksi dipulihkan."
+                        _showInviteDiscovery.value = false
+                        _userEmail.value = repository.getConnectedAccount()
+                        loadTransaksi()
+                    },
+                    onFailure = { error ->
+                        _invitationMessage.value = "Gagal: ${error.message}"
+                    }
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _invitationMessage.value = "Gagal: ${e.message}"
+            } finally {
+                _isInviting.value = false
+            }
+        }
+    }
+
+    /** User B: Tolak undangan. */
+    fun rejectInvitation() {
+        repository.rejectInvitation()
+        _showInviteDiscovery.value = false
+        _foundSharedSpreadsheets.value = emptyList()
+        _invitationMessage.value = "Undangan ditolak."
+    }
+
+    /** Dismiss invitation message (after snackbar). */
+    fun clearInvitationMessage() {
+        _invitationMessage.value = null
+    }
+
+    /**
+     * User A: Hapus akses kolaborator.
+     * @param permissionId ID permission dari [DriveSharingHelper.CollaboratorInfo.permissionId].
+     */
+    fun removeCollaborator(permissionId: String) {
+        viewModelScope.launch {
+            _isInviting.value = true
+            _invitationMessage.value = null
+            try {
+                val result = repository.removeCollaborator(permissionId)
+                result.fold(
+                    onSuccess = {
+                        _invitationMessage.value = "Kolaborator berhasil dihapus"
+                        // Refresh daftar kolaborator
+                        loadCollaborators()
+                    },
+                    onFailure = { error ->
+                        _invitationMessage.value = "Gagal: ${error.message}"
+                    }
+                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _invitationMessage.value = "Gagal: ${e.message}"
+            } finally {
+                _isInviting.value = false
+            }
+        }
     }
 }

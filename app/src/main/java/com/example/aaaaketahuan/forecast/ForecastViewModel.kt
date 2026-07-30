@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.aaaaketahuan.forecast.model.BalancePrediction
 import com.example.aaaaketahuan.forecast.model.DeficitRisk
 import com.example.aaaaketahuan.forecast.model.EndOfMonthPrediction
+import com.example.aaaaketahuan.forecast.model.RisikoDefisitResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,6 +52,15 @@ class ForecastViewModel @Inject constructor(
     /** Risiko defisit akhir bulan. null sebelum load pertama. */
     val deficitRisk: StateFlow<DeficitRisk?> =
         _deficitRisk.asStateFlow()
+
+    private val _advancedDeficitRisk = MutableStateFlow<RisikoDefisitResult?>(null)
+
+    /**
+     * Risiko defisit versi lanjutan — mempertimbangkan pola pengeluaran
+     * weekday/weekend dan prediksi gaji. null sebelum load pertama.
+     */
+    val advancedDeficitRisk: StateFlow<RisikoDefisitResult?> =
+        _advancedDeficitRisk.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
 
@@ -133,6 +143,33 @@ class ForecastViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 _errorMessage.value = "Gagal memuat risiko defisit: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // ─── Fitur 4: Risiko Defisit Lanjutan ───────────────────────────
+
+    /**
+     * Memuat analisis risiko defisit versi lanjutan yang mempertimbangkan:
+     * - Pola pengeluaran weekday vs weekend (bobot 60:40, 7 vs 30 hari).
+     * - Prediksi gaji dari histori (rentang tanggal + nominal rata-rata).
+     * - Simulasi harian saldo berjalan sampai akhir bulan.
+     * - Weakest-link confidence antara pengeluaran dan gaji.
+     *
+     * Hasil disimpan di [advancedDeficitRisk].
+     */
+    fun loadAdvancedDeficitRisk() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val result = forecastRepository.getAdvancedDeficitRisk()
+                _advancedDeficitRisk.value = result
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _errorMessage.value = "Gagal memuat analisis risiko lanjutan: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
